@@ -21,6 +21,16 @@ typedef struct {
     Color color;
 } LineItem;
 
+// Rect
+typedef struct {
+    int x;
+    int y;
+    int width;
+    int height;
+    bool filled;
+    Color color;
+} RectItem;
+
 // List Objects
 typedef struct NodeDrawable NodeDrawable;
 

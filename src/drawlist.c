@@ -18,6 +18,9 @@ void draw(NodeDrawable *node) {
         case 'l':
             draw_line((LineItem *) node->drawable);
             break;
+        case 'r':
+            draw_rect((RectItem *) node->drawable);
+            break;
     }
 }
 
@@ -91,4 +94,27 @@ void add_line(int x1, int y1, int x2, int y2, Color color) {
 
 void draw_line(LineItem *line) {
     DrawLine(line->x1, line->y1, line->x2, line->y2, line->color);
+}
+
+/**
+Rect Functions
+**/
+void add_rect(int x, int y, int width, int height, bool filled, Color color) {
+    RectItem *rect = (RectItem *) malloc(sizeof(RectItem));
+    rect->x = x;
+    rect->y = y;
+    rect->width = width;
+    rect->height = height;
+    rect->filled = filled;
+    rect->color = color;
+
+    add_drawable(rect, 'r');
+}
+
+void draw_rect(RectItem *rect) {
+    if(rect->filled) {
+        DrawRectangle(rect->x, rect->y, rect->width, rect->height, rect->color);
+    } else {
+        DrawRectangleLines(rect->x, rect->y, rect->width, rect->height, rect->color);
+    }
 }

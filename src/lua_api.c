@@ -31,3 +31,19 @@ int lua_draw_line(lua_State *L) {
 
     return 0;
 }
+
+//----------------------------------------------------------------------------------
+// ui.draw_rect(x:int, y:int, largura:int, altura:int, prenchido:bool, cor:int)
+//----------------------------------------------------------------------------------
+int lua_draw_rect(lua_State *L) {
+    int x = luaL_checkinteger(L, 1);
+    int y = luaL_checkinteger(L, 2);
+    int largura = luaL_checkinteger(L, 3);
+    int altura = luaL_checkinteger(L, 4);
+    bool prenchido = lua_toboolean(L, 5);
+    int cor = luaL_checkinteger(L, 6);
+
+    add_rect(x, y, largura, altura, prenchido, DARKGRAY);
+
+    return 0;
+}

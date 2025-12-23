@@ -12,4 +12,6 @@ function update()
     ui.draw_text("Bem-vindo ao Lupi!", 280, 180 + math.floor(y))
 
     ui.draw_line(10, 10, 280, 180, 1)
+    ui.draw_rect(50, 50, 80, 80, true, 1)
+    ui.draw_rect(185, 185, 50, 50, false, 1)
 end

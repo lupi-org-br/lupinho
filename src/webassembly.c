@@ -68,6 +68,9 @@ int main(void)
     lua_pushcfunction(globalLuaState, lua_draw_line);
     lua_setfield(globalLuaState, -2, "draw_line");
 
+    lua_pushcfunction(globalLuaState, lua_draw_rect);
+    lua_setfield(globalLuaState, -2, "draw_rect");
+
     lua_setglobal(globalLuaState, "ui");
 
     InitWindow(screenWidth, screenHeight, "Lupi Emulator");
