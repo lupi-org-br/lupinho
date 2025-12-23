@@ -11,8 +11,13 @@ extern Drawlist drawlist;
 Drawable Functions
 */
 void draw(NodeDrawable *node) {
-    if(node->type == 't') {
-        draw_text((TextItem *) node->drawable);
+    switch(node->type) {
+        case 't':
+            draw_text((TextItem *) node->drawable);
+            break;
+        case 'l':
+            draw_line((LineItem *) node->drawable);
+            break;
     }
 }
 
@@ -68,4 +73,22 @@ void add_text(char *text_s, int x, int y) {
 
 void draw_text(TextItem *text) {
     DrawText(text->text, text->x, text->y, text->fontSize, text->color);
+}
+
+/**
+Line Functions
+**/
+void add_line(int x1, int y1, int x2, int y2, Color color) {
+    LineItem *line = (LineItem *) malloc(sizeof(LineItem));
+    line->x1 = x1;
+    line->y1 = y1;
+    line->x2 = x2;
+    line->y2 = y2;
+    line->color = color;
+
+    add_drawable(line, 'l');
+}
+
+void draw_line(LineItem *line) {
+    DrawLine(line->x1, line->y1, line->x2, line->y2, line->color);
 }

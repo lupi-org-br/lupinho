@@ -10,4 +10,6 @@ function update()
     y =  math.sin(t) * 25
 
     ui.draw_text("Bem-vindo ao Lupi!", 280, 180 + math.floor(y))
+
+    ui.draw_line(10, 10, 280, 180, 1)
 end

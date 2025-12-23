@@ -13,10 +13,11 @@ void clear_drawlist();
 void add_drawable(void *drawable, char type);
 void add_text(char *text_s, int x, int y);
 void draw_text(TextItem *text);
-
+void add_line(int x1, int y1, int x2, int y2, Color color);
+void draw_line(LineItem *line);
 /*
 Lua Functions
 */
 int lua_draw_text(lua_State *L);
-
+int lua_draw_line(lua_State *L);
 #endif
