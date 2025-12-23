@@ -2,7 +2,7 @@
 CC = emcc
 
 # Source Files
-SRC = webassembly.c drawlist.c
+SRC = webassembly.c drawlist.c lua_api.c
 
 # Output File
 OUTPUT = ../dist/index.html

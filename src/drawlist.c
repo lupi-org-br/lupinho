@@ -1,19 +1,11 @@
-#include "types.h"
-#include "drawlist.h"
-
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
-
 #include <stdlib.h>
+
+#include "drawlist.h"
 
 /*
 Global vars
 */
 extern Drawlist drawlist;
-
-void add_text(char *text_s, int x, int y);
-void draw_text(TextItem *text);
 
 /*
 Drawable Functions
@@ -64,17 +56,4 @@ void add_text(char *text_s, int x, int y) {
 
 void draw_text(TextItem *text) {
     DrawText(text->text, text->x, text->y, text->fontSize, text->color);
-}
-
-//----------------------------------------------------------------------------------
-// ui.draw_text(texto:string, x:int, y:int)
-//----------------------------------------------------------------------------------
-int lua_escreva(lua_State *L) {
-    char *text = luaL_checkstring(L, 1);
-    int x = luaL_optinteger(L, 2, 10);
-    int y = luaL_optinteger(L, 3, 10);
-
-    add_text(text, x, y);
-
-    return 0;
 }

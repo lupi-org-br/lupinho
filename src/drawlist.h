@@ -3,8 +3,19 @@
 
 #include <lua.h>
 
-int lua_escreva(lua_State *L);
-int lua_limpar_textos(lua_State *L);
-int lua_atualizar(lua_State *L);
+#include "types.h"
+
+/*
+Drawlist Functions
+*/
+void draw(NodeDrawable *node);
+void add_drawable(void *drawable, char type);
+void add_text(char *text_s, int x, int y);
+void draw_text(TextItem *text);
+
+/*
+Lua Functions
+*/
+int lua_draw_text(lua_State *L);
 
 #endif

@@ -1,4 +1,3 @@
-#include "types.h"
 #include "drawlist.h"
 
 #include <lua.h>
@@ -16,9 +15,6 @@ Constants
 **/
 const int screenWidth = 800;
 const int screenHeight = 450;
-
-extern void draw(NodeDrawable *);
-
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -64,8 +60,8 @@ int main(void)
 
     lua_newtable(globalLuaState);
 
-    lua_pushcfunction(globalLuaState, lua_escreva);
-    lua_setfield(globalLuaState, -2, "escreva");
+    lua_pushcfunction(globalLuaState, lua_draw_text);
+    lua_setfield(globalLuaState, -2, "draw_text");
 
     lua_setglobal(globalLuaState, "ui");
 
