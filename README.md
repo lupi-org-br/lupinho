@@ -8,7 +8,7 @@
 
 - 🌐 **Browser-based** — Runs on WebAssembly, no installation required
 - 📜 **Lua scripting** — Write your games in simple, easy-to-learn Lua
-- 🎨 **2D Graphics** — Draw text, lines, rectangles, and circles
+- 🎨 **2D Graphics** — Draw text, lines, rectangles, circles, and triangles
 - ⚡ **60 FPS** — Smooth gameplay at 60 frames per second
 - 🔧 **Raylib powered** — Built on the lightweight Raylib graphics library
 
@@ -93,6 +93,7 @@ All drawing functions are available under the `ui` table:
 | `ui.draw_line(x1, y1, x2, y2, color)` | Draw a line between two points |
 | `ui.draw_rect(x, y, width, height, filled, color)` | Draw a rectangle |
 | `ui.draw_circle(cx, cy, radius, filled, color, border, border_color)` | Draw a circle |
+| `ui.draw_triangle(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, color)` | Draw a triangle with 3 vertices |
 
 ### Example Game
 
@@ -109,6 +110,7 @@ function update()
     ui.draw_text("Bem-vindo ao Lupi!", 280, 180 + math.floor(y))
     ui.draw_rect(50, 50, 80, 80, true, 1)
     ui.draw_circle(200, 300, 20, true, 1, true, 0)
+    ui.draw_triangle(20, 250, 100, 250, 55, 350, 1)
 end
 ```
 
