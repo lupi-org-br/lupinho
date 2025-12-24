@@ -64,3 +64,20 @@ int lua_draw_circle(lua_State *L) {
 
     return 0;
 }
+
+//----------------------------------------------------------------------------------
+// ui.draw_triangle(p1_x:int, p1_y:int, p2_x:int, p2_y:int, p3_x:int, p3_y:int, cor:int)
+//----------------------------------------------------------------------------------
+int lua_draw_triangle(lua_State *L) {
+    int p1_x = luaL_checkinteger(L, 1);
+    int p1_y = luaL_checkinteger(L, 2);
+    int p2_x = luaL_checkinteger(L, 3);
+    int p2_y = luaL_checkinteger(L, 4);
+    int p3_x = luaL_checkinteger(L, 5);
+    int p3_y = luaL_checkinteger(L, 6);
+    int cor = luaL_checkinteger(L, 7);
+
+    add_triangle(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, DARKGRAY);
+
+    return 0;
+}

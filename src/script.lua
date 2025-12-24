@@ -17,4 +17,5 @@ function update()
     ui.draw_circle(200, 300, 20, true, 1, true, 0)
     ui.draw_circle(260, 300, 20, true, 1, false, 0)
     ui.draw_circle(200, 360, 20, false, 1, true, 0)
+    ui.draw_triangle(20, 250, 100, 250, 55, 350, 1)
 end

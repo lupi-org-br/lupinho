@@ -42,6 +42,17 @@ typedef struct {
     Color color;
 } CircleItem;
 
+// Triangle
+typedef struct {
+    int p1_x;
+    int p1_y;
+    int p2_x;
+    int p2_y;
+    int p3_x;
+    int p3_y;
+    Color color;
+} TriangleItem;
+
 // List Objects
 typedef struct NodeDrawable NodeDrawable;
 

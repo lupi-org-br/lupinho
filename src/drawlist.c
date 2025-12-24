@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "drawlist.h"
 
@@ -24,6 +25,9 @@ void draw(NodeDrawable *node) {
         case 'c':
             draw_circle((CircleItem *) node->drawable);
             break;
+        case 'v':
+            draw_triangle((TriangleItem *) node->drawable);
+            break;
     }
 }
 
@@ -31,8 +35,8 @@ void clear_drawlist() {
     NodeDrawable *current = drawlist.root;
     while(current != NULL) {
         NodeDrawable *next = current->next;
-        free(current->drawable);  // Free the TextItem (or other drawable)
-        free(current);            // Then free the node itself
+        free(current->drawable);
+        free(current);
         current = next;
     }
     drawlist.count = 0;
@@ -146,4 +150,28 @@ void draw_circle(CircleItem *circle) {
     if(circle->has_border) {
         DrawCircleLines(circle->center_x, circle->center_y, circle->radius, circle->border_color);
     }
+}
+
+/**
+Triangle Functions
+**/
+void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, Color color) {
+    TriangleItem *triangle = (TriangleItem *) malloc(sizeof(TriangleItem));
+    triangle->p1_x = p1_x;
+    triangle->p1_y = p1_y;
+    triangle->p2_x = p2_x;
+    triangle->p2_y = p2_y;
+    triangle->p3_x = p3_x;
+    triangle->p3_y = p3_y;
+    triangle->color = color;
+
+    add_drawable(triangle, 'v');
+}
+
+void draw_triangle(TriangleItem *triangle) {
+    Vector2 v1 = { triangle->p1_x, triangle->p1_y };
+    Vector2 v2 = { triangle->p2_x, triangle->p2_y };
+    Vector2 v3 = { triangle->p3_x, triangle->p3_y };
+
+    DrawTriangle(v1, v3, v2, triangle->color);
 }
