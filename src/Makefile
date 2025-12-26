@@ -27,8 +27,8 @@ EMFLAGS += -s FORCE_FILESYSTEM=1
 EMFLAGS += --shell-file libs/raylib-web/minshell.html
 EMFLAGS += -DPLATFORM_WEB
 
-# Preload Lua script into the virtual filesystem
-EMFLAGS += --preload-file script.lua
+# Preload game-example directory into the virtual filesystem
+EMFLAGS += --preload-file ../game-example@/game-example
 
 # Optimization
 OPTIMIZATION = -O2

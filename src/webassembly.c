@@ -84,8 +84,18 @@ int main(void)
 
     InitWindow(screenWidth, screenHeight, "Lupi Emulator");
 
-    if (luaL_dofile(globalLuaState, "script.lua") != LUA_OK) {
-        fprintf(stderr, "Erro ao carregar script.lua: %s\n", lua_tostring(globalLuaState, -1));
+    // Add game-example directory to Lua's package.path so require() can find modules there
+    lua_getglobal(globalLuaState, "package");
+    lua_getfield(globalLuaState, -1, "path");
+    const char *current_path = lua_tostring(globalLuaState, -1);
+    lua_pop(globalLuaState, 1);
+
+    lua_pushfstring(globalLuaState, "%s;./game-example/?.lua", current_path);
+    lua_setfield(globalLuaState, -2, "path");
+    lua_pop(globalLuaState, 1);
+
+    if (luaL_dofile(globalLuaState, "game-example/game.lua") != LUA_OK) {
+        fprintf(stderr, "Erro ao carregar game-example/game.lua: %s\n", lua_tostring(globalLuaState, -1));
         lua_pop(globalLuaState, 1);
     }
 
