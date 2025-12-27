@@ -1,2 +1,4 @@
 dist/*
 !dist/.keep
+docs/*
+!docs/.keep
