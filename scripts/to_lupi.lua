@@ -37,6 +37,7 @@ local function encode_all_files(path)
                 bitmap_encoder(props)
 
                 SpriteSheets[name:gsub("%.png$", "")] = {
+                    name = name:gsub("%.png$", ""),
                     data = props.octet_content,
                     width = props.extra_headers["x-tw"],
                     height = props.extra_headers["x-th"],
