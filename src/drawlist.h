@@ -29,7 +29,7 @@ void draw_triangle(TriangleItem *triangle);
 
 void add_tile(SpriteInMemory *sprite_in_memory, int tile_index, int x, int y);
 void draw_tile(TileItem *tile);
-void add_sprite(SpriteInMemory *sprite_in_memory, int x, int y);
+void add_sprite(SpriteInMemory *sprite_in_memory, int x, int y, bool flipped);
 void draw_sprite(SpriteItem *sprite);
 
 /*

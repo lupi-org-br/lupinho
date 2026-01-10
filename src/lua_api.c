@@ -163,7 +163,7 @@ int lua_tile(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.spr(spritesheet:table, x:int, y:int)
+// ui.spr(spritesheet:table, x:int, y:int, flipped:bool = false)
 //----------------------------------------------------------------------------------
 int lua_spr(lua_State *L) {
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -175,9 +175,14 @@ int lua_spr(lua_State *L) {
     int x = luaL_checkinteger(L, 2);
     int y = luaL_checkinteger(L, 3);
 
+    bool flipped = false;
+    if(lua_gettop(L) > 3) {
+        flipped = lua_toboolean(L, 4);
+    }
+
     SpriteInMemory *sprite_in_memory = get_sprite_in_memory(name);
 
-    add_sprite(sprite_in_memory, x, y);
+    add_sprite(sprite_in_memory, x, y, flipped);
 
     return 0;
 }

@@ -86,6 +86,7 @@ typedef struct {
     SpriteInMemory *sprite_in_memory;
     int x;
     int y;
+    bool flipped;
 } SpriteItem;
 
 // List Objects

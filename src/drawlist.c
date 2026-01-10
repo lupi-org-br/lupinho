@@ -187,17 +187,33 @@ void draw_triangle(TriangleItem *triangle) {
 /**
 Sprite Functions
 **/
-void add_sprite(SpriteInMemory *sprite_in_memory, int x, int y) {
+void add_sprite(SpriteInMemory *sprite_in_memory, int x, int y, bool flipped) {
     SpriteItem *sprite = (SpriteItem *) malloc(sizeof(SpriteItem));
     sprite->sprite_in_memory = sprite_in_memory;
     sprite->x = x;
     sprite->y = y;
+    sprite->flipped = flipped;
 
     add_drawable(sprite, 'w');
 }
 
 void draw_sprite(SpriteItem *sprite) {
-    DrawTexture(sprite->sprite_in_memory->texture, sprite->x, sprite->y, WHITE);
+    int dest_width = sprite->sprite_in_memory->tile_width;
+    int dest_height = sprite->sprite_in_memory->tile_height;
+    int src_width = dest_width;
+
+    if (sprite->flipped) {
+        src_width = -src_width;
+    }
+
+    DrawTexturePro(
+        sprite->sprite_in_memory->texture,
+        (Rectangle) { 0, 0, src_width, sprite->sprite_in_memory->tile_height },
+        (Rectangle) { sprite->x, sprite->y, dest_width, dest_height },
+        (Vector2) { 0, 0 },
+        0,
+        WHITE
+    );
 }
 
 /**
