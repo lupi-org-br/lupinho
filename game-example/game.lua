@@ -1,64 +1,84 @@
 require "palette"
 require "sprites"
 
-x = 200
-t = 0
-player_x = 100
-player_y = 100
-frame = 0
-frame_counter = 0
+require "const"
+require "map"
+require "bg"
+require "player"
+require "pois"
+require "camera"
+require "title"
+require "utils"
+require "overw"
+
+function make_game()
+    local frame = 0
+    local map = make_map()
+    local player = make_player(map)
+    local camera = make_camera(map)
+    local pois = make_pois(camera, player, map)
+    local bg = make_bg()
+    local assets = { bg, map, player, camera, pois, player.overlay() }
+    camera.set_target(player)
+
+    return {
+        update = function() end,
+        name = function() return "game" end,
+        is_finished = function()
+            return player.should_reset()
+        end,
+        draw = function(current_frame)
+            frame = current_frame
+
+            for i = 1, #Palette do
+                local color = Palette[i]
+                ui.palset(i - 1, color)
+            end
+
+            pad_1, pad_2 = 0,0
+
+            ui.camera(0, 0)
+            ui.clip(0, 0, 480, 270)
+
+            for _, v in pairs(assets) do
+                v.before_frame(frame, camera, player, map)
+            end
+
+            for _, v in pairs(assets) do
+                v.on_frame(frame, camera, player, map)
+            end
+        end
+    }
+end
+
+Frame, Scene = 0, nil
+
+local function draw()
+    Frame = Frame + 1
+
+    if Scene == nil then
+        Scene = make_overworld()
+    end
+
+    if Scene.is_finished() == true then
+        math.randomseed(os.time())
+        Frame = 0
+        Scene = Scene.name() == "game" and make_overworld() or make_game()
+        collectgarbage("collect")
+    end
+
+    Scene.draw(Frame)
+end
+
+function update(new_frame)
+    if Scene then Scene.update() end
+    draw()
+end
 
 for i = 1, #Palette do
-    ui.palset(i - 1, Palette[i])
+    local color = Palette[i]
+    ui.palset(i - 1, color)
 end
 
-function update()
-    -- x = x + 4
-    -- t = t + 0.05
-
-    -- y =  math.sin(t) * 25
-
-    -- ui.draw_text("Bem-vindo ao Lupi!", 280, 180 + math.floor(y))
-
-    -- ui.draw_line(10, 10, 280, 180, 9)
-    -- ui.draw_rect(50, 50, 80, 80, true, 2)
-
-    -- ui.draw_rect(185, 185, 50, 50, false, 5)
-    -- ui.draw_circle(50, 90, 20, true, 6, true, 2)
-    -- ui.draw_circle(30, 60, 20, true, 8, false, 8)
-    -- ui.draw_circle(200, 360, 20, false, 8, true, 12)
-    -- ui.draw_triangle(20, 250, 100, 250, 55, 350, 9)
-
-    ui.spr(SpriteSheets['tilemap.leaves'], 10, 50)
-
-
-
-    ui.tile(SpriteSheets['player.run.' .. frame + 1], 0, player_x, player_y)
-
-    frame_counter = frame_counter + 1
-    if frame_counter >= 5 then
-        frame = (frame + 1) % 5
-        frame_counter = 0
-    end
-
-    if ui.btn(RIGHT, 0) then
-        player_x = player_x + 3
-    end
-    if ui.btn(LEFT, 0) then
-        player_x = player_x - 3
-    end
-    if ui.btn(UP, 0) then
-        player_y = player_y - 3
-    end
-    if ui.btn(DOWN, 0) then
-        player_y = player_y + 3
-    end
-
-    if ui.btnp(BTN_Z, 0) then
-        ui.draw_text("BTN_Z", 200, 100)
-    elseif ui.btnp(BTN_E, 0) then
-        ui.draw_text("BTN_E", 200, 100)
-    elseif ui.btnp(BTN_Q, 0) then
-        ui.draw_text("BTN_Q", 200, 100)
-    end
-end
+-- sfx.music("orca")
+collectgarbage("generational")
