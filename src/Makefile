@@ -5,7 +5,7 @@ CC = emcc
 SRC = webassembly.c drawlist.c lua_api.c
 
 # Output File
-OUTPUT = ../dist/index.html
+OUTPUT = ../dist/game.html
 
 # Raylib Directories
 RAYLIB_SRC = libs/raylib-web
@@ -48,7 +48,7 @@ production: $(SRC)
 
 # Clean generated files
 clean:
-	rm -f $(OUTPUT) index.js index.wasm lupi_emulator
+	rm -f $(OUTPUT) game.js game.wasm lupi_emulator
 
 # Help
 help:

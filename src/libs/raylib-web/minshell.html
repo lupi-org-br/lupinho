@@ -76,6 +76,8 @@
                 })(),
                 canvas: (function() {
                     var canvas = document.getElementById('canvas');
+                    canvas.style.imageRendering = "pixelated";
+                    canvas.style.msInterpolationMode = "nearest-neighbor"; // IE fallback
                     return canvas;
                 })()
             };

@@ -1,4 +1,6 @@
 dist/*
 !dist/.keep
+site/dist/*
+!site/dist/.keep
 docs/*
 !docs/.keep

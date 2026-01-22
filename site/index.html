@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lupi Player - Console Emulator</title>
+    <style>
+        :root {
+            --bg-color: #0f0f12;
+            --panel-color: #1a1a24;
+            --text-color: #e0e0e6;
+            --accent-color: #725dec;
+            --accent-hover: #8a78f0;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --game-width: 480px;
+            --game-height: 270px;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            width: 100%;
+            padding: 1.5rem 0;
+            background: linear-gradient(to bottom, var(--panel-color), var(--bg-color));
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            background: linear-gradient(45deg, #725dec, #ff7eb3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem 1rem;
+            gap: 2rem;
+        }
+
+        /* Game Display */
+        .game-area {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .game-container {
+            position: relative;
+            background-color: #000;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6),
+                        0 0 20px rgba(114, 93, 236, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 4px solid #2a2a35;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+            /* Fixed container size updated by JS */
+            width: var(--container-width, 480px);
+            height: var(--container-height, 270px);
+        }
+
+        .scaling-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: var(--game-width);
+            height: var(--game-height);
+            transform-origin: top left;
+
+            /* The 'zoom' property is non-standard and causes double-scaling in Chrome
+               if 'transform: scale' is also present.
+               We will use 'transform: scale' as it is the standard and more performant. */
+            transform: scale(var(--current-zoom, 1));
+        }
+
+        /* If you specifically want to use the 'zoom' property in browsers that support it: */
+        @supports (zoom: 1) {
+            .scaling-wrapper {
+                /* In browsers that support zoom, we use zoom and disable transform to avoid double scaling */
+                zoom: var(--current-zoom, 1);
+                transform: none;
+            }
+        }
+
+        #game-frame {
+            border: none;
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        /* CRT Filter Effect */
+        .crt-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+        }
+
+        .crt-overlay.active {
+            display: block;
+        }
+
+        .crt-overlay::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 11;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.27861; }
+            5% { opacity: 0.34769; }
+            10% { opacity: 0.23604; }
+            15% { opacity: 0.90626; }
+            20% { opacity: 0.18128; }
+            25% { opacity: 0.83891; }
+            30% { opacity: 0.65583; }
+            35% { opacity: 0.57807; }
+            40% { opacity: 0.26559; }
+            45% { opacity: 0.84693; }
+            50% { opacity: 0.96019; }
+            55% { opacity: 0.08523; }
+            60% { opacity: 0.71056; }
+            65% { opacity: 0.73437; }
+            70% { opacity: 0.8523; }
+            75% { opacity: 0.14977; }
+            80% { opacity: 0.44219; }
+            85% { opacity: 0.5823; }
+            90% { opacity: 0.61035; }
+            95% { opacity: 0.67933; }
+            100% { opacity: 0.89341; }
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--panel-color);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            gap: 1.5rem;
+        }
+
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #7c7c8a;
+            letter-spacing: 1px;
+        }
+
+        .btn-toggle-group {
+            display: flex;
+            background-color: #0f0f12;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        button {
+            background: transparent;
+            color: #a0a0b0;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        button.active {
+            background-color: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 12px rgba(114, 93, 236, 0.3);
+        }
+
+        button.action {
+            background-color: #2d2d3d;
+            color: white;
+            padding: 0.75rem 1.5rem;
+        }
+
+        button.action:hover {
+            background-color: #3d3d4d;
+        }
+
+        button.primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        button.primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Virtual Gamepad */
+        .virtual-gamepad {
+            display: none;
+            width: 100%;
+            justify-content: space-between;
+            margin-top: 2rem;
+            user-select: none;
+        }
+
+        @media (max-width: 768px) {
+            .virtual-gamepad {
+                display: flex;
+            }
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 15px;
+            transform: rotate(-15deg);
+        }
+
+        .pad-btn {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            touch-action: manipulation;
+        }
+
+        .pad-btn:active {
+            background-color: var(--accent-color);
+            transform: scale(0.95);
+        }
+
+        .pad-up { grid-area: 1 / 2; border-radius: 12px 12px 4px 4px; }
+        .pad-down { grid-area: 3 / 2; border-radius: 4px 4px 12px 12px; }
+        .pad-left { grid-area: 2 / 1; border-radius: 12px 4px 4px 12px; }
+        .pad-right { grid-area: 2 / 3; border-radius: 4px 12px 12px 4px; }
+
+        .btn-z { grid-area: 2 / 1; background-color: rgba(114, 93, 236, 0.3); }
+        .btn-x { grid-area: 1 / 2; background-color: rgba(239, 68, 68, 0.3); }
+
+        /* Instructions */
+        .instructions {
+            width: 100%;
+            max-width: 800px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border-left: 4px solid var(--accent-color);
+            padding: 1.5rem;
+            border-radius: 4px;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            font-size: 1rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+        }
+
+        .key-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .key-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        kbd {
+            background-color: #2d2d3d;
+            border-bottom: 3px solid #1a1a24;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-family: monospace;
+            color: #fff;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: auto;
+            padding: 2rem;
+            color: #4a4a5a;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Fullscreen handling */
+        #player-container:fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            border: none;
+            border-radius: 0;
+            display: grid !important;
+            place-items: center !important;
+            background-color: #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        #player-container:fullscreen .scaling-wrapper {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            margin: 0 !important;
+            width: 480px !important;
+            height: 270px !important;
+            transform: scale(3) !important;
+            transform-origin: center center !important;
+        }
+
+        /* Chrome fix for centered zoomed element */
+        @supports (zoom: 1) {
+            #player-container:fullscreen .scaling-wrapper {
+                zoom: 3 !important;
+                transform: none !important;
+                /* Reset possible offsets */
+                top: 0 !important;
+                left: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 class="logo">Lupi Console</h1>
+    </header>
+
+    <div class="container">
+        <div class="game-area">
+            <div class="game-container" id="player-container">
+                <div class="scaling-wrapper" id="scaling-wrapper">
+                    <div class="crt-overlay" id="crt-overlay"></div>
+                    <iframe id="game-frame" src="./dist/game.html" scrolling="no"></iframe>
+                </div>
+            </div>
+
+            <div class="virtual-gamepad">
+                <div class="dpad">
+                    <div class="pad-btn pad-up" data-key="ArrowUp">↑</div>
+                    <div class="pad-btn pad-left" data-key="ArrowLeft">←</div>
+                    <div class="pad-btn pad-right" data-key="ArrowRight">→</div>
+                    <div class="pad-btn pad-down" data-key="ArrowDown">↓</div>
+                </div>
+                <div class="action-buttons">
+                    <div class="pad-btn btn-z" data-key="z">Z</div>
+                    <div class="pad-btn btn-x" data-key="x">X</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="control-row">
+                <div class="control-group">
+                    <span class="label">Resolução:</span>
+                    <div class="btn-toggle-group">
+                        <button onclick="changeScale(1)" id="scale-1">1x</button>
+                        <button onclick="changeScale(2)" id="scale-2">2x</button>
+                        <button onclick="changeScale(3)" id="scale-3">3x</button>
+                        <button onclick="changeScale('fit')" id="scale-fit">Auto</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <span class="label">Filtros:</span>
+                    <button class="action" onclick="toggleCRT()" id="crt-btn">CRT: OFF</button>
+                </div>
+
+                <div class="control-group">
+                    <button class="action primary" onclick="toggleFullscreen()">TELA CHEIA</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>Controles</h3>
+            <div class="key-grid">
+                <div class="key-item"><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> <span>Movimentação</span></div>
+                <div class="key-item"><kbd>Z</kbd> <span>Botão A / Pulo</span></div>
+                <div class="key-item"><kbd>X</kbd> <span>Botão B / Ataque</span></div>
+                <div class="key-item"><kbd>Q</kbd><kbd>E</kbd> <span>Extras</span></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Lupi Engine &copy; 2026 | Desenvolvido para alto desempenho
+    </footer>
+
+    <script>
+        const BASE_WIDTH = 480;
+        const BASE_HEIGHT = 270;
+        const frame = document.getElementById('game-frame');
+        const container = document.getElementById('player-container');
+        const scalingWrapper = document.getElementById('scaling-wrapper');
+        const crtOverlay = document.getElementById('crt-overlay');
+
+        let currentScale = localStorage.getItem('lupi_scale') || '2';
+        let crtEnabled = localStorage.getItem('lupi_crt') === 'true';
+
+        function init() {
+            // Apply saved settings
+            changeScale(currentScale);
+            if (crtEnabled) {
+                crtOverlay.classList.add('active');
+                document.getElementById('crt-btn').textContent = 'CRT: ON';
+                document.getElementById('crt-btn').style.color = 'var(--success-color)';
+            }
+
+            // Virtual Gamepad Handlers
+            setupVirtualGamepad();
+        }
+
+        function changeScale(scale) {
+            currentScale = scale;
+            localStorage.setItem('lupi_scale', scale);
+
+            // Update buttons
+            document.querySelectorAll('.btn-toggle-group button').forEach(b => b.classList.remove('active'));
+            document.getElementById('scale-' + scale).classList.add('active');
+
+            if (scale === 'fit') {
+                updateFitSize();
+            } else {
+                const s = parseFloat(scale);
+                applyZoom(s);
+            }
+        }
+
+        function applyZoom(s) {
+            // Apply zoom property and transform fallback to the wrapper
+            scalingWrapper.style.setProperty('--current-zoom', s);
+
+            // Size the container to match the scaled content
+            container.style.setProperty('--container-width', (BASE_WIDTH * s) + 'px');
+            container.style.setProperty('--container-height', (BASE_HEIGHT * s) + 'px');
+        }
+
+        function updateFitSize() {
+            if (currentScale !== 'fit') return;
+
+            const padding = 40;
+            const maxWidth = window.innerWidth - padding;
+            const maxHeight = window.innerHeight - 350; // Space for controls
+
+            let zoomW = maxWidth / BASE_WIDTH;
+            let zoomH = maxHeight / BASE_HEIGHT;
+            let finalZoom = Math.min(zoomW, zoomH);
+
+            applyZoom(finalZoom);
+        }
+
+        function toggleCRT() {
+            crtEnabled = !crtEnabled;
+            localStorage.setItem('lupi_crt', crtEnabled);
+
+            const btn = document.getElementById('crt-btn');
+            if (crtEnabled) {
+                crtOverlay.classList.add('active');
+                btn.textContent = 'CRT: ON';
+                btn.style.color = 'var(--success-color)';
+            } else {
+                crtOverlay.classList.remove('active');
+                btn.textContent = 'CRT: OFF';
+                btn.style.color = '';
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    alert(`Erro ao entrar em tela cheia: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function setupVirtualGamepad() {
+            const buttons = document.querySelectorAll('.pad-btn');
+
+            buttons.forEach(btn => {
+                const key = btn.getAttribute('data-key');
+
+                const handleStart = (e) => {
+                    e.preventDefault();
+                    window.dispatchEvent(new KeyboardEvent('keydown', { key: key }));
+                    // Also try dispatching to iframe
+                    try {
+                        frame.contentWindow.dispatchEvent(new KeyboardEvent('keydown', { key: key }));
+                    } catch(e) {}
+                };
+
+                const handleEnd = (e) => {
+                    e.preventDefault();
+                    window.dispatchEvent(new KeyboardEvent('keyup', { key: key }));
+                    try {
+                        frame.contentWindow.dispatchEvent(new KeyboardEvent('keyup', { key: key }));
+                    } catch(e) {}
+                };
+
+                btn.addEventListener('touchstart', handleStart);
+                btn.addEventListener('touchend', handleEnd);
+                btn.addEventListener('mousedown', handleStart);
+                btn.addEventListener('mouseup', handleEnd);
+                btn.addEventListener('mouseleave', handleEnd);
+            });
+        }
+
+        window.addEventListener('resize', updateFitSize);
+        window.addEventListener('load', init);
+
+        // Forward keyboard events to iframe for better focus handling
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement !== frame) {
+                try {
+                    frame.contentWindow.dispatchEvent(new KeyboardEvent('keydown', {
+                        key: e.key,
+                        code: e.code,
+                        keyCode: e.keyCode,
+                        which: e.which,
+                        shiftKey: e.shiftKey,
+                        ctrlKey: e.ctrlKey,
+                        metaKey: e.metaKey
+                    }));
+                } catch(err) {}
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (document.activeElement !== frame) {
+                try {
+                    frame.contentWindow.dispatchEvent(new KeyboardEvent('keyup', {
+                        key: e.key,
+                        code: e.code,
+                        keyCode: e.keyCode,
+                        which: e.which,
+                        shiftKey: e.shiftKey,
+                        ctrlKey: e.ctrlKey,
+                        metaKey: e.metaKey
+                    }));
+                } catch(err) {}
+            }
+        });
+    </script>
+</body>
+</html>
