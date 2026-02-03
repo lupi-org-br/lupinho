@@ -248,7 +248,15 @@ void draw_triangle(TriangleItem *triangle) {
     Vector2 v2 = { triangle->p2_x, triangle->p2_y };
     Vector2 v3 = { triangle->p3_x, triangle->p3_y };
 
-    DrawTriangle(v1, v3, v2, triangle->color);
+    // Ensure counter-clockwise order as required by raylib's DrawTriangle.
+    // In screen coordinates (Y-down), the cross product sign is flipped,
+    // so we swap vertices when cross >= 0 to get the correct winding.
+    float cross = (v2.x - v1.x) * (v3.y - v1.y) - (v2.y - v1.y) * (v3.x - v1.x);
+    if (cross < 0) {
+        DrawTriangle(v1, v2, v3, triangle->color);
+    } else {
+        DrawTriangle(v1, v3, v2, triangle->color);
+    }
 }
 
 /**
