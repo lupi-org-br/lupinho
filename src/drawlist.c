@@ -41,9 +41,6 @@ void draw(NodeDrawable *node) {
         case 't':
             draw_text((TextItem *) node->drawable);
             break;
-        case 'r':
-            draw_rect((RectItem *) node->drawable);
-            break;
         case 'c':
             draw_circle((CircleItem *) node->drawable);
             break;
@@ -166,17 +163,18 @@ void draw_line(LineItem *line) {
 /**
 Rect Functions
 **/
-void add_rect(int x, int y, int width, int height, bool filled, Color color) {
-    RectItem *rect = (RectItem *) malloc(sizeof(RectItem));
-    rect->x = x;
-    rect->y = y;
-    rect->width = width;
-    rect->height = height;
-    rect->filled = filled;
-    rect->color = color;
-    memcpy(rect->fill_pattern, fill_pattern, sizeof(fill_pattern));
+void add_rect(int x, int y, int width, int height, bool filled, int color_index) {
+    RectItem rect = {
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
+        .filled = filled,
+        .color_index = color_index,
+    };
+    memcpy(rect.fill_pattern, fill_pattern, sizeof(fill_pattern));
 
-    add_drawable(rect, 'r');
+    draw_rect(&rect);
 }
 
 void draw_rect(RectItem *rect) {
@@ -190,18 +188,54 @@ void draw_rect(RectItem *rect) {
         }
 
         if (has_pattern) {
-            for (int y = rect->y; y < rect->y + rect->height; y++) {
-                for (int x = rect->x; x < rect->x + rect->width; x++) {
-                    if (should_draw_pixel_with_pattern(x, y, rect->fill_pattern)) {
-                        DrawPixel(x, y, rect->color);
+            // Draw filled rectangle with pattern to frame buffer
+            for (int py = rect->y; py < rect->y + rect->height; py++) {
+                for (int px = rect->x; px < rect->x + rect->width; px++) {
+                    if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
+                        if (should_draw_pixel_with_pattern(px, py, rect->fill_pattern)) {
+                            frame_buffer[py][px] = rect->color_index;
+                        }
                     }
                 }
             }
         } else {
-            DrawRectangle(rect->x, rect->y, rect->width, rect->height, rect->color);
+            // Draw filled rectangle to frame buffer
+            for (int py = rect->y; py < rect->y + rect->height; py++) {
+                for (int px = rect->x; px < rect->x + rect->width; px++) {
+                    if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
+                        frame_buffer[py][px] = rect->color_index;
+                    }
+                }
+            }
         }
     } else {
-        DrawRectangleLines(rect->x, rect->y, rect->width, rect->height, rect->color);
+        // Draw rectangle outline to frame buffer (4 lines)
+        // Top line
+        for (int px = rect->x; px < rect->x + rect->width; px++) {
+            if (px >= 0 && px < screenWidth && rect->y >= 0 && rect->y < screenHeight) {
+                frame_buffer[rect->y][px] = rect->color_index;
+            }
+        }
+        // Bottom line
+        int bottom = rect->y + rect->height - 1;
+        for (int px = rect->x; px < rect->x + rect->width; px++) {
+            if (px >= 0 && px < screenWidth && bottom >= 0 && bottom < screenHeight) {
+                frame_buffer[bottom][px] = rect->color_index;
+            }
+        }
+        // Left line
+        for (int py = rect->y; py < rect->y + rect->height; py++) {
+            if (rect->x >= 0 && rect->x < screenWidth && py >= 0 && py < screenHeight) {
+                frame_buffer[py][rect->x] = rect->color_index;
+            }
+        }
+        // Right line
+        int right = rect->x + rect->width - 1;
+        for (int py = rect->y; py < rect->y + rect->height; py++) {
+            if (right >= 0 && right < screenWidth && py >= 0 && py < screenHeight) {
+                frame_buffer[py][right] = rect->color_index;
+            }
+        }
     }
 }
 

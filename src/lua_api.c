@@ -46,7 +46,7 @@ int lua_draw_rect(lua_State *L) {
     bool filled = lua_toboolean(L, 5);
     int color = luaL_checkinteger(L, 6);
 
-    add_rect(x, y, width, height, filled, get_palette_color(color));
+    add_rect(x, y, width, height, filled, color);
 
     return 0;
 }
@@ -61,7 +61,7 @@ int lua_rect(lua_State *L) {
     int y2 = luaL_checkinteger(L, 4);
     int color = luaL_checkinteger(L, 5);
 
-    add_rect(x1, y1, (x2 - x1), (y2 - y1), false, get_palette_color(color));
+    add_rect(x1, y1, (x2 - x1), (y2 - y1), false, color);
 
     return 0;
 }
@@ -76,7 +76,7 @@ int lua_rectfill(lua_State *L) {
     int y2 = luaL_checkinteger(L, 4);
     int color = luaL_checkinteger(L, 5);
 
-    add_rect(x1, y1, (x2 - x1), (y2 - y1), true, get_palette_color(color));
+    add_rect(x1, y1, (x2 - x1), (y2 - y1), true, color);
 
     return 0;
 }

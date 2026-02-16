@@ -18,7 +18,7 @@ void draw_text(TextItem *text);
 void add_line(int x1, int y1, int x2, int y2, Color color, int color_index);
 void draw_line(LineItem *line);
 
-void add_rect(int x, int y, int width, int height, bool filled, Color color);
+void add_rect(int x, int y, int width, int height, bool filled, int color_index);
 void draw_rect(RectItem *rect);
 
 void add_circle(int center_x, int center_y, int radius, bool filled, Color color, bool has_border, Color border_color);

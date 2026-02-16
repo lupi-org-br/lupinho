@@ -31,7 +31,7 @@ typedef struct {
     int width;
     int height;
     bool filled;
-    Color color;
+    int color_index;
     uint8_t fill_pattern[8];
 } RectItem;
 
