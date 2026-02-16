@@ -1,16 +1,10 @@
 #include "drawlist.h"
 
+#include <stdlib.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 #include "raylib.h"
-
-/**
-Global objects
-**/
-Drawlist drawlist;
-lua_State *globalLuaState = NULL;
-SpritesInMemory sprites_in_memory;
 
 /**
 Constants
@@ -18,6 +12,14 @@ Constants
 const int screenWidth = 480;
 const int screenHeight = 270;
 const int initial_sprites_in_memory_count = 10;
+
+/**
+Global objects
+**/
+Drawlist drawlist;
+lua_State *globalLuaState = NULL;
+SpritesInMemory sprites_in_memory;
+char frame_buffer[screenHeight][screenWidth];
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -48,6 +50,8 @@ void UpdateDrawFrame(void)
         node = node->next;
     }
 
+    draw_frame_buffer();
+
     #ifndef PRODUCTION
     DrawFPS(10, 10); // DEBUG
     #endif
@@ -55,6 +59,7 @@ void UpdateDrawFrame(void)
     EndDrawing();
 
     clear_drawlist();
+    clear_frame_buffer();
 }
 
 int main(void)

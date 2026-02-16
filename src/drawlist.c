@@ -120,19 +120,52 @@ void draw_text(TextItem *text) {
 /**
 Line Functions
 **/
-void add_line(int x1, int y1, int x2, int y2, Color color) {
+extern char frame_buffer[][480];
+extern const int screenWidth;
+extern const int screenHeight;
+
+void add_line(int x1, int y1, int x2, int y2, Color color, int color_index) {
     LineItem *line = (LineItem *) malloc(sizeof(LineItem));
     line->x1 = x1;
     line->y1 = y1;
     line->x2 = x2;
     line->y2 = y2;
     line->color = color;
+    line->color_index = color_index;
 
     add_drawable(line, 'l');
 }
 
 void draw_line(LineItem *line) {
-    DrawLine(line->x1, line->y1, line->x2, line->y2, line->color);
+    // Bresenham's line algorithm - write to frame buffer
+    int dx = abs(line->x2 - line->x1);
+    int dy = abs(line->y2 - line->y1);
+    int sx = (line->x1 < line->x2) ? 1 : -1;
+    int sy = (line->y1 < line->y2) ? 1 : -1;
+    int err = dx - dy;
+
+    int x = line->x1;
+    int y = line->y1;
+
+    while(1) {
+        // Bounds check and write to frame buffer
+        if (x >= 0 && x < screenWidth && y >= 0 && y < screenHeight) {
+            frame_buffer[y][x] = line->color_index;
+        }
+
+        if(x == line->x2 && y == line->y2) break;
+
+        int e2 = 2 * err;
+        if(e2 > -dy) {
+            err -= dy;
+            x += sx;
+        }
+
+        if(e2 < dx) {
+            err += dx;
+            y += sy;
+        }
+    }
 }
 
 /**
@@ -420,3 +453,47 @@ SpriteInMemory* get_sprite_in_memory(char *name) {
     }
     return NULL;
 }
+
+/*
+* Frame Buffer Functions
+*/
+extern const int screenWidth;
+extern const int screenHeight;
+extern char frame_buffer[][480];
+
+Texture scene;
+
+Image generate_image_from_frame_buffer() {
+    Image image = GenImageColor(screenWidth, screenHeight, BLANK);
+    Color *pixels = (Color *)image.data;
+
+    for(int i = 0; i < screenHeight; i++) {
+        for(int j = 0; j < screenWidth; j++) {
+            int pixel_index = j + (screenWidth * i);
+            pixels[pixel_index] = get_palette_color(frame_buffer[i][j]);
+        }
+    }
+
+    return image;
+}
+
+void draw_frame_buffer() {
+    Image image = generate_image_from_frame_buffer();
+    scene = LoadTextureFromImage(image);
+ 
+    Rectangle source = { 0, 0, screenWidth, screenHeight };
+    Rectangle dest = { 0, 0, screenWidth, screenHeight };
+    Vector2 origin = { 0, 0 };
+
+    DrawTexturePro(scene, source, dest, origin, 0, WHITE);
+    UnloadImage(image);
+}
+
+void clear_frame_buffer() {
+    for(int i = 0; i < screenHeight; i++) {
+        memset(frame_buffer[i], 0, screenWidth);
+    }
+
+    UnloadTexture(scene);
+}
+

@@ -15,7 +15,7 @@ void add_drawable(void *drawable, char type);
 void add_text(char *text_s, int x, int y);
 void draw_text(TextItem *text);
 
-void add_line(int x1, int y1, int x2, int y2, Color color);
+void add_line(int x1, int y1, int x2, int y2, Color color, int color_index);
 void draw_line(LineItem *line);
 
 void add_rect(int x, int y, int width, int height, bool filled, Color color);
@@ -55,6 +55,12 @@ extern SpritesInMemory sprites_in_memory;
 void load_sprites_in_memory_from_lua(lua_State *L);
 void add_sprite_in_memory(char *name, char *data, int width, int height, int ntiles);
 SpriteInMemory* get_sprite_in_memory(char *name);
+
+/*
+Frame Buffer Functions
+*/
+void clear_frame_buffer();
+void draw_frame_buffer();
 
 /*
 Lua Functions

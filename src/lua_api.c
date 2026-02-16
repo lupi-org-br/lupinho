@@ -30,7 +30,7 @@ int lua_draw_line(lua_State *L) {
     int y2 = luaL_checkinteger(L, 4);
     int color = luaL_checkinteger(L, 5);
 
-    add_line(x1, y1, x2, y2, get_palette_color(color));
+    add_line(x1, y1, x2, y2, get_palette_color(color), color);
 
     return 0;
 }
