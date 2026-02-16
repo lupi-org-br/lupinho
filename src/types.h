@@ -94,7 +94,7 @@ typedef struct {
 
 // Clear Drawable
 typedef struct {
-    Color color;
+    int color_index;
 } ClearItem;
 
 // List Objects

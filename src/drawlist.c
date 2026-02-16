@@ -41,9 +41,6 @@ void draw(NodeDrawable *node) {
         case 't':
             draw_text((TextItem *) node->drawable);
             break;
-        case 'y':
-            draw_clear((ClearItem *) node->drawable);
-            break;
         case 's':
             draw_tile((TileItem *) node->drawable);
             break;
@@ -498,15 +495,19 @@ Color get_palette_color(int index) {
 /**
 Clear Functions
 **/
-void add_clear(Color color) {
-    ClearItem *clear = (ClearItem *) malloc(sizeof(ClearItem));
-    clear->color = color;
+void add_clear(int color_index) {
+    ClearItem clear = {
+        .color_index = color_index,
+    };
 
-    add_drawable(clear, 'y');
+    draw_clear(&clear);
 }
 
 void draw_clear(ClearItem *clear) {
-    ClearBackground(clear->color);
+    // Fill entire frame buffer with the color index
+    for (int y = 0; y < screenHeight; y++) {
+        memset(frame_buffer[y], clear->color_index, screenWidth);
+    }
 }
 
 /**

@@ -259,7 +259,7 @@ int lua_btnp(lua_State *L) {
 //----------------------------------------------------------------------------------
 int lua_cls(lua_State *L) {
     int color = luaL_checkinteger(L, 1);
-    add_clear(get_palette_color(color));
+    add_clear(color);
 
     return 0;
 }
