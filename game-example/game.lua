@@ -1,84 +1,29 @@
-require "palette"
-require "sprites"
+-- Setup palette colors
+-- Format: palset(index, BGR555 value)
+-- BGR555: 5 bits each for Blue, Green, Red (15-bit color)
+ui.palset(0, 0x0000) -- Black/Transparent
+ui.palset(1, 0x7FFF) -- White
+ui.palset(2, 0x001F) -- Red
+ui.palset(3, 0x03E0) -- Green
+ui.palset(4, 0x7C00) -- Blue
+ui.palset(5, 0x7FE0) -- Cyan
+ui.palset(6, 0x03FF) -- Yellow
+ui.palset(7, 0x7C1F) -- Magenta
 
-require "const"
-require "map"
-require "bg"
-require "player"
-require "pois"
-require "camera"
-require "title"
-require "utils"
-require "overw"
+-- Animation variables
+local time = 0
+local screenWidth = 480
+local screenHeight = 270
 
-function make_game()
-    local frame = 0
-    local map = make_map()
-    local player = make_player(map)
-    local camera = make_camera(map)
-    local pois = make_pois(camera, player, map)
-    local bg = make_bg()
-    local assets = { bg, map, player, camera, pois, player.overlay() }
-    camera.set_target(player)
+function update()
+	-- Clear screen with black
 
-    return {
-        update = function() end,
-        name = function() return "game" end,
-        is_finished = function()
-            return player.should_reset()
-        end,
-        draw = function(current_frame)
-            frame = current_frame
+	time = time + 1
 
-            for i = 1, #Palette do
-                local color = Palette[i]
-                ui.palset(i - 1, color)
-            end
-
-            pad_1, pad_2 = 0,0
-
-            ui.camera(0, 0)
-            ui.clip(0, 0, 480, 270)
-
-            for _, v in pairs(assets) do
-                v.before_frame(frame, camera, player, map)
-            end
-
-            for _, v in pairs(assets) do
-                v.on_frame(frame, camera, player, map)
-            end
-        end
-    }
+	-- Draw animated diagonal lines
+	local offset = (time * 2) % 80
+	for i = 0, 10 do
+		local x = i * 40 + offset
+		ui.draw_line(x, 0, x + screenHeight, screenHeight, i % 7 + 1)
+	end
 end
-
-Frame, Scene = 0, nil
-
-local function draw()
-    Frame = Frame + 1
-
-    if Scene == nil then
-        Scene = make_overworld()
-    end
-
-    if Scene.is_finished() == true then
-        math.randomseed(os.time())
-        Frame = 0
-        Scene = Scene.name() == "game" and make_overworld() or make_game()
-        collectgarbage("collect")
-    end
-
-    Scene.draw(Frame)
-end
-
-function update(new_frame)
-    if Scene then Scene.update() end
-    draw()
-end
-
-for i = 1, #Palette do
-    local color = Palette[i]
-    ui.palset(i - 1, color)
-end
-
--- sfx.music("orca")
-collectgarbage("generational")
