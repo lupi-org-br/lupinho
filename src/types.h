@@ -21,7 +21,6 @@ typedef struct {
     int y1;
     int x2;
     int y2;
-    Color color;
     int color_index;
 } LineItem;
 

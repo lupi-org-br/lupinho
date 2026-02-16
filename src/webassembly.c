@@ -19,7 +19,6 @@ Global objects
 Drawlist drawlist;
 lua_State *globalLuaState = NULL;
 SpritesInMemory sprites_in_memory;
-char frame_buffer[screenHeight][screenWidth];
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>

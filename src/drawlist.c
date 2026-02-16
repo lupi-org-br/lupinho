@@ -7,6 +7,9 @@
 Global vars
 */
 extern Drawlist drawlist;
+extern const int screenWidth;
+extern const int screenHeight;
+char frame_buffer[270][480];
 Color palette[PALETTE_SIZE];
 
 /*
@@ -37,9 +40,6 @@ void draw(NodeDrawable *node) {
     switch(node->type) {
         case 't':
             draw_text((TextItem *) node->drawable);
-            break;
-        case 'l':
-            draw_line((LineItem *) node->drawable);
             break;
         case 'r':
             draw_rect((RectItem *) node->drawable);
@@ -120,24 +120,20 @@ void draw_text(TextItem *text) {
 /**
 Line Functions
 **/
-extern char frame_buffer[][480];
-extern const int screenWidth;
-extern const int screenHeight;
-
 void add_line(int x1, int y1, int x2, int y2, Color color, int color_index) {
-    LineItem *line = (LineItem *) malloc(sizeof(LineItem));
-    line->x1 = x1;
-    line->y1 = y1;
-    line->x2 = x2;
-    line->y2 = y2;
-    line->color = color;
-    line->color_index = color_index;
+    LineItem line = {
+        .x1 = x1,
+        .y1 = y1,
+        .x2 = x2,
+        .y2 = y2,
+        .color_index = color_index,
+    };
 
-    add_drawable(line, 'l');
+    draw_line(&line);
 }
 
 void draw_line(LineItem *line) {
-    // Bresenham's line algorithm - write to frame buffer
+    // Bresenham's line algorithm
     int dx = abs(line->x2 - line->x1);
     int dy = abs(line->y2 - line->y1);
     int sx = (line->x1 < line->x2) ? 1 : -1;
@@ -148,7 +144,6 @@ void draw_line(LineItem *line) {
     int y = line->y1;
 
     while(1) {
-        // Bounds check and write to frame buffer
         if (x >= 0 && x < screenWidth && y >= 0 && y < screenHeight) {
             frame_buffer[y][x] = line->color_index;
         }
@@ -457,10 +452,6 @@ SpriteInMemory* get_sprite_in_memory(char *name) {
 /*
 * Frame Buffer Functions
 */
-extern const int screenWidth;
-extern const int screenHeight;
-extern char frame_buffer[][480];
-
 Texture scene;
 
 Image generate_image_from_frame_buffer() {
