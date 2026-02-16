@@ -44,9 +44,6 @@ void draw(NodeDrawable *node) {
         case 'y':
             draw_clear((ClearItem *) node->drawable);
             break;
-        case 'v':
-            draw_triangle((TriangleItem *) node->drawable);
-            break;
         case 's':
             draw_tile((TileItem *) node->drawable);
             break;
@@ -330,32 +327,80 @@ void draw_circle(CircleItem *circle) {
 /**
 Triangle Functions
 **/
-void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, Color color) {
-    TriangleItem *triangle = (TriangleItem *) malloc(sizeof(TriangleItem));
-    triangle->p1_x = p1_x;
-    triangle->p1_y = p1_y;
-    triangle->p2_x = p2_x;
-    triangle->p2_y = p2_y;
-    triangle->p3_x = p3_x;
-    triangle->p3_y = p3_y;
-    triangle->color = color;
+void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, int color_index) {
+    TriangleItem triangle = {
+        .p1_x = p1_x,
+        .p1_y = p1_y,
+        .p2_x = p2_x,
+        .p2_y = p2_y,
+        .p3_x = p3_x,
+        .p3_y = p3_y,
+        .color_index = color_index,
+    };
 
-    add_drawable(triangle, 'v');
+    draw_triangle(&triangle);
+}
+
+// Helper function to draw a horizontal line for triangle filling
+void draw_horizontal_line_fb(int x1, int x2, int y, int color_index) {
+    if (y < 0 || y >= screenHeight) return;
+
+    if (x1 > x2) {
+        int temp = x1;
+        x1 = x2;
+        x2 = temp;
+    }
+
+    if (x1 < 0) x1 = 0;
+    if (x2 >= screenWidth) x2 = screenWidth - 1;
+
+    for (int x = x1; x <= x2; x++) {
+        frame_buffer[y][x] = color_index;
+    }
 }
 
 void draw_triangle(TriangleItem *triangle) {
-    Vector2 v1 = { triangle->p1_x, triangle->p1_y };
-    Vector2 v2 = { triangle->p2_x, triangle->p2_y };
-    Vector2 v3 = { triangle->p3_x, triangle->p3_y };
+    // Sort vertices by Y coordinate (v1.y <= v2.y <= v3.y)
+    int x1 = triangle->p1_x, y1 = triangle->p1_y;
+    int x2 = triangle->p2_x, y2 = triangle->p2_y;
+    int x3 = triangle->p3_x, y3 = triangle->p3_y;
 
-    // Ensure counter-clockwise order as required by raylib's DrawTriangle.
-    // In screen coordinates (Y-down), the cross product sign is flipped,
-    // so we swap vertices when cross >= 0 to get the correct winding.
-    float cross = (v2.x - v1.x) * (v3.y - v1.y) - (v2.y - v1.y) * (v3.x - v1.x);
-    if (cross < 0) {
-        DrawTriangle(v1, v2, v3, triangle->color);
-    } else {
-        DrawTriangle(v1, v3, v2, triangle->color);
+    // Bubble sort by Y
+    if (y1 > y2) {
+        int tmp = y1; y1 = y2; y2 = tmp;
+        tmp = x1; x1 = x2; x2 = tmp;
+    }
+    if (y2 > y3) {
+        int tmp = y2; y2 = y3; y3 = tmp;
+        tmp = x2; x2 = x3; x3 = tmp;
+    }
+    if (y1 > y2) {
+        int tmp = y1; y1 = y2; y2 = tmp;
+        tmp = x1; x1 = x2; x2 = tmp;
+    }
+
+    // Degenerate triangle (all points on same horizontal line)
+    if (y1 == y3) {
+        int minX = x1 < x2 ? (x1 < x3 ? x1 : x3) : (x2 < x3 ? x2 : x3);
+        int maxX = x1 > x2 ? (x1 > x3 ? x1 : x3) : (x2 > x3 ? x2 : x3);
+        draw_horizontal_line_fb(minX, maxX, y1, triangle->color_index);
+        return;
+    }
+
+    // Draw triangle using scanline algorithm
+    for (int y = y1; y <= y3; y++) {
+        bool secondHalf = y > y2 || y2 == y1;
+        int segmentHeight = secondHalf ? y3 - y2 : y2 - y1;
+
+        if (segmentHeight == 0) continue;
+
+        float alpha = (float)(y - y1) / (float)(y3 - y1);
+        float beta = secondHalf ? (float)(y - y2) / (float)(y3 - y2) : (float)(y - y1) / (float)(y2 - y1);
+
+        int xa = x1 + (int)((x3 - x1) * alpha);
+        int xb = secondHalf ? x2 + (int)((x3 - x2) * beta) : x1 + (int)((x2 - x1) * beta);
+
+        draw_horizontal_line_fb(xa, xb, y, triangle->color_index);
     }
 }
 

@@ -124,7 +124,7 @@ int lua_trisfill(lua_State *L) {
     int p3_y = luaL_checkinteger(L, 6);
     int color = luaL_checkinteger(L, 7);
 
-    add_triangle(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, get_palette_color(color));
+    add_triangle(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, color);
 
     return 0;
 }

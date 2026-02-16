@@ -55,7 +55,7 @@ typedef struct {
     int p2_y;
     int p3_x;
     int p3_y;
-    Color color;
+    int color_index;
 } TriangleItem;
 
 // Sprite In Memory
