@@ -21,7 +21,7 @@ void draw_line(LineItem *line);
 void add_rect(int x, int y, int width, int height, bool filled, int color_index);
 void draw_rect(RectItem *rect);
 
-void add_circle(int center_x, int center_y, int radius, bool filled, Color color, bool has_border, Color border_color);
+void add_circle(int center_x, int center_y, int radius, bool filled, int color_index, bool has_border, int border_color_index);
 void draw_circle(CircleItem *circle);
 
 void add_clear(Color color);

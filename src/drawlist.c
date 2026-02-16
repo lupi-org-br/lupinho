@@ -41,9 +41,6 @@ void draw(NodeDrawable *node) {
         case 't':
             draw_text((TextItem *) node->drawable);
             break;
-        case 'c':
-            draw_circle((CircleItem *) node->drawable);
-            break;
         case 'y':
             draw_clear((ClearItem *) node->drawable);
             break;
@@ -242,18 +239,40 @@ void draw_rect(RectItem *rect) {
 /**
 Circle Functions
 **/
-void add_circle(int center_x, int center_y, int radius, bool filled, Color color, bool has_border, Color border_color) {
-    CircleItem *circle = (CircleItem *) malloc(sizeof(CircleItem));
-    circle->center_x = center_x;
-    circle->center_y = center_y;
-    circle->radius = radius;
-    circle->filled = filled;
-    circle->color = color;
-    circle->has_border = has_border;
-    circle->border_color = border_color;
-    memcpy(circle->fill_pattern, fill_pattern, sizeof(fill_pattern));
+void add_circle(int center_x, int center_y, int radius, bool filled, int color_index, bool has_border, int border_color_index) {
+    CircleItem circle = {
+        .center_x = center_x,
+        .center_y = center_y,
+        .radius = radius,
+        .filled = filled,
+        .color_index = color_index,
+        .has_border = has_border,
+        .border_color_index = border_color_index,
+    };
+    memcpy(circle.fill_pattern, fill_pattern, sizeof(fill_pattern));
 
-    add_drawable(circle, 'c');
+    draw_circle(&circle);
+}
+
+// Helper function to draw circle pixels using midpoint algorithm
+void draw_circle_pixels(int cx, int cy, int x, int y, int color_index) {
+    // Draw 8 symmetric points
+    if (cx + x >= 0 && cx + x < screenWidth && cy + y >= 0 && cy + y < screenHeight)
+        frame_buffer[cy + y][cx + x] = color_index;
+    if (cx - x >= 0 && cx - x < screenWidth && cy + y >= 0 && cy + y < screenHeight)
+        frame_buffer[cy + y][cx - x] = color_index;
+    if (cx + x >= 0 && cx + x < screenWidth && cy - y >= 0 && cy - y < screenHeight)
+        frame_buffer[cy - y][cx + x] = color_index;
+    if (cx - x >= 0 && cx - x < screenWidth && cy - y >= 0 && cy - y < screenHeight)
+        frame_buffer[cy - y][cx - x] = color_index;
+    if (cx + y >= 0 && cx + y < screenWidth && cy + x >= 0 && cy + x < screenHeight)
+        frame_buffer[cy + x][cx + y] = color_index;
+    if (cx - y >= 0 && cx - y < screenWidth && cy + x >= 0 && cy + x < screenHeight)
+        frame_buffer[cy + x][cx - y] = color_index;
+    if (cx + y >= 0 && cx + y < screenWidth && cy - x >= 0 && cy - x < screenHeight)
+        frame_buffer[cy - x][cx + y] = color_index;
+    if (cx - y >= 0 && cx - y < screenWidth && cy - x >= 0 && cy - x < screenHeight)
+        frame_buffer[cy - x][cx - y] = color_index;
 }
 
 void draw_circle(CircleItem *circle) {
@@ -266,26 +285,45 @@ void draw_circle(CircleItem *circle) {
             }
         }
 
-        if (has_pattern) {
-            int radius_squared = circle->radius * circle->radius;
-            for (int y = circle->center_y - circle->radius; y <= circle->center_y + circle->radius; y++) {
-                for (int x = circle->center_x - circle->radius; x <= circle->center_x + circle->radius; x++) {
-                    int dx = x - circle->center_x;
-                    int dy = y - circle->center_y;
+        // Draw filled circle to frame buffer
+        int radius_squared = circle->radius * circle->radius;
+        for (int py = circle->center_y - circle->radius; py <= circle->center_y + circle->radius; py++) {
+            for (int px = circle->center_x - circle->radius; px <= circle->center_x + circle->radius; px++) {
+                if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
+                    int dx = px - circle->center_x;
+                    int dy = py - circle->center_y;
                     if (dx * dx + dy * dy <= radius_squared) {
-                        if (should_draw_pixel_with_pattern(x, y, circle->fill_pattern)) {
-                            DrawPixel(x, y, circle->color);
+                        if (has_pattern) {
+                            if (should_draw_pixel_with_pattern(px, py, circle->fill_pattern)) {
+                                frame_buffer[py][px] = circle->color_index;
+                            }
+                        } else {
+                            frame_buffer[py][px] = circle->color_index;
                         }
                     }
                 }
             }
-        } else {
-            DrawCircle(circle->center_x, circle->center_y, circle->radius, circle->color);
         }
     }
 
     if(circle->has_border) {
-        DrawCircleLines(circle->center_x, circle->center_y, circle->radius, circle->border_color);
+        // Draw circle outline using midpoint circle algorithm
+        int x = 0;
+        int y = circle->radius;
+        int d = 1 - circle->radius;
+
+        draw_circle_pixels(circle->center_x, circle->center_y, x, y, circle->border_color_index);
+
+        while (x < y) {
+            if (d < 0) {
+                d = d + 2 * x + 3;
+            } else {
+                d = d + 2 * (x - y) + 5;
+                y--;
+            }
+            x++;
+            draw_circle_pixels(circle->center_x, circle->center_y, x, y, circle->border_color_index);
+        }
     }
 }
 

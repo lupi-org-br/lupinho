@@ -93,7 +93,7 @@ int lua_draw_circle(lua_State *L) {
     bool border = lua_toboolean(L, 6);
     int border_color = luaL_checkinteger(L, 7);
 
-    add_circle(center_x, center_y, radius, filled, get_palette_color(color), border, get_palette_color(border_color));
+    add_circle(center_x, center_y, radius, filled, color, border, border_color);
 
     return 0;
 }
@@ -107,7 +107,7 @@ int lua_circfill(lua_State *L) {
     int radius = luaL_checkinteger(L, 3);
     int color = luaL_checkinteger(L, 4);
 
-    add_circle(center_x, center_y, radius, true, get_palette_color(color), true, get_palette_color(color));
+    add_circle(center_x, center_y, radius, true, color, true, color);
 
     return 0;
 }
