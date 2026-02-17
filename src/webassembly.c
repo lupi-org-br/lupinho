@@ -24,6 +24,12 @@ SpritesInMemory sprites_in_memory;
     #include <emscripten/emscripten.h>
 #endif
 
+static int lua_sprites_loader(lua_State *L) {
+    inject_sprites_global(L, "game-example/lupi_manifest.txt", "game-example");
+    lua_getglobal(L, "Sprites");
+    return 1;
+}
+
 void UpdateDrawFrame() {
     if (globalLuaState != NULL) {
         lua_getglobal(globalLuaState, "update");
@@ -176,7 +182,12 @@ int main() {
     lua_pushfstring(globalLuaState, "%s;./game-example/?.lua", current_path);
     lua_setfield(globalLuaState, -2, "path");
 
-    inject_sprites_global(globalLuaState, "game-example/lupi_manifest.txt", "game-example");
+    // Register sprites as a lazy preload: built only when require("sprites") is called
+    lua_getglobal(globalLuaState, "package");
+    lua_getfield(globalLuaState, -1, "preload");
+    lua_pushcfunction(globalLuaState, lua_sprites_loader);
+    lua_setfield(globalLuaState, -2, "sprites");
+    lua_pop(globalLuaState, 2); // pop preload and package
 
     if (luaL_dofile(globalLuaState, "game-example/game.lua") != LUA_OK) {
         printf("Error loading game-example/game.lua: %s\n", lua_tostring(globalLuaState, -1));
