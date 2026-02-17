@@ -24,8 +24,7 @@ SpritesInMemory sprites_in_memory;
     #include <emscripten/emscripten.h>
 #endif
 
-void UpdateDrawFrame(void)
-{
+void UpdateDrawFrame() {
     if (globalLuaState != NULL) {
         lua_getglobal(globalLuaState, "update");
         if (lua_isfunction(globalLuaState, -1)) {
@@ -61,8 +60,7 @@ void UpdateDrawFrame(void)
     clear_frame_buffer();
 }
 
-int main(void)
-{
+int main() {
     sprites_in_memory.count = 0;
     sprites_in_memory.max_count = initial_sprites_in_memory_count;
     sprites_in_memory.sprites = (SpriteInMemory **) calloc(sprites_in_memory.max_count, sizeof(SpriteInMemory *));
@@ -178,12 +176,13 @@ int main(void)
     lua_pushfstring(globalLuaState, "%s;./game-example/?.lua", current_path);
     lua_setfield(globalLuaState, -2, "path");
 
+    inject_sprites_global(globalLuaState, "game-example/lupi_manifest.txt", "game-example");
+
     if (luaL_dofile(globalLuaState, "game-example/game.lua") != LUA_OK) {
         printf("Error loading game-example/game.lua: %s\n", lua_tostring(globalLuaState, -1));
         lua_pop(globalLuaState, 1);
     } else {
         printf("Game-example/game.lua loaded successfully\n");
-        load_sprites_in_memory_from_lua(globalLuaState);
     }
 
     SetTargetFPS(60);

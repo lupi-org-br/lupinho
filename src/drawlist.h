@@ -52,13 +52,14 @@ extern uint8_t fill_pattern[8];
 Sprites In Memory Functions
 */
 extern SpritesInMemory sprites_in_memory;
-void load_sprites_in_memory_from_lua(lua_State *L);
+void inject_sprites_global(lua_State *L, const char *manifest_path, const char *game_dir);
 void add_sprite_in_memory(char *name, char *data, int width, int height, int ntiles);
 SpriteInMemory* get_sprite_in_memory(char *name);
 
 /*
 Frame Buffer Functions
 */
+extern char frame_buffer[270][480];
 void clear_frame_buffer();
 void draw_frame_buffer();
 

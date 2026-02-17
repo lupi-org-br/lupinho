@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <lua.h>
 #include <lualib.h>
@@ -148,8 +149,16 @@ int lua_palset(lua_State *L) {
 int lua_tile(lua_State *L) {
     luaL_checktype(L, 1, LUA_TTABLE);
 
-    lua_getfield(L, 1, "name");
-    const char *name = luaL_checkstring(L, -1);
+    lua_getfield(L, 1, "path");
+    const char *path = luaL_checkstring(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 1, "width");
+    int width = luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 1, "height");
+    int height = luaL_checkinteger(L, -1);
     lua_pop(L, 1);
 
     int tile_index_with_flags = luaL_checkinteger(L, 2);
@@ -159,10 +168,40 @@ int lua_tile(lua_State *L) {
     bool flipped = (tile_index_with_flags & 1024) != 0;
     int tile_index = tile_index_with_flags & ~1024;
 
-    SpriteInMemory *sprite_in_memory = get_sprite_in_memory(name);
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        printf("Warning: Could not open tile file %s\n", path);
+        return 0;
+    }
 
-    add_tile(sprite_in_memory, tile_index, x, y, flipped);
+    int tile_size = width * height;
+    long data_offset = (long)tile_index * tile_size;
+    fseek(f, data_offset, SEEK_SET);
 
+    unsigned char *data = (unsigned char *) malloc(tile_size);
+    if (!data) {
+        fclose(f);
+        return 0;
+    }
+
+    fread(data, 1, tile_size, f);
+    fclose(f);
+
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            unsigned char idx = data[row * width + col];
+            if (idx == 0) continue;
+
+            int px = flipped ? (x + width - 1 - col) : (x + col);
+            int py = y + row;
+
+            if (px >= 0 && px < 480 && py >= 0 && py < 270) {
+                frame_buffer[py][px] = idx;
+            }
+        }
+    }
+
+    free(data);
     return 0;
 }
 
@@ -172,22 +211,57 @@ int lua_tile(lua_State *L) {
 int lua_spr(lua_State *L) {
     luaL_checktype(L, 1, LUA_TTABLE);
 
-    lua_getfield(L, 1, "name");
-    const char *name = luaL_checkstring(L, -1);
+    lua_getfield(L, 1, "path");
+    const char *path = luaL_checkstring(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 1, "width");
+    int width = luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 1, "height");
+    int height = luaL_checkinteger(L, -1);
     lua_pop(L, 1);
 
     int x = luaL_checkinteger(L, 2);
     int y = luaL_checkinteger(L, 3);
 
     bool flipped = false;
-    if(lua_gettop(L) > 3) {
+    if (lua_gettop(L) > 3) {
         flipped = lua_toboolean(L, 4);
     }
 
-    SpriteInMemory *sprite_in_memory = get_sprite_in_memory(name);
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        printf("Warning: Could not open sprite file %s\n", path);
+        return 0;
+    }
 
-    add_sprite(sprite_in_memory, x, y, flipped);
+    int data_size = width * height;
+    unsigned char *data = (unsigned char *) malloc(data_size);
+    if (!data) {
+        fclose(f);
+        return 0;
+    }
 
+    fread(data, 1, data_size, f);
+    fclose(f);
+
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            unsigned char idx = data[row * width + col];
+            if (idx == 0) continue;
+
+            int px = flipped ? (x + width - 1 - col) : (x + col);
+            int py = y + row;
+
+            if (px >= 0 && px < 480 && py >= 0 && py < 270) {
+                frame_buffer[py][px] = idx;
+            }
+        }
+    }
+
+    free(data);
     return 0;
 }
 
@@ -366,43 +440,77 @@ int lua_set_pallet(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// Load sprites in memory from Lua global table "SpriteSheets"
-// Reads the SpriteSheets table and populates the C sprites in memory array using add_sprite_in_memory()
+// Parse lupi_manifest.txt and inject a nested `Sprites` Lua global.
+// Each bitmap entry becomes: Sprites[namespace][key] = { path, width, height, ntiles }
 //----------------------------------------------------------------------------------
-void load_sprites_in_memory_from_lua(lua_State *L) {
-    lua_getglobal(L, "SpriteSheets");
-
-    if (!lua_istable(L, -1)) {
-        printf("Warning: SpriteSheets table not found in Lua state\n");
-        lua_pop(L, 1);
+void inject_sprites_global(lua_State *L, const char *manifest_path, const char *game_dir) {
+    FILE *f = fopen(manifest_path, "r");
+    if (!f) {
+        printf("Warning: Could not open manifest %s\n", manifest_path);
         return;
     }
 
-    lua_pushnil(L);
-    while(lua_next(L, -2) != 0) {
-        // Key is at -2, value is at -1
-        const char *name = lua_tostring(L, -2);
+    lua_newtable(L); // Sprites table
 
-        lua_getfield(L, -1, "data");
-        const char *data = luaL_checkstring(L, -1);
-        lua_pop(L, 1);
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        long id;
+        int size;
+        char path[256];
+        char json[256];
 
-        lua_getfield(L, -1, "width");
-        int width = luaL_checkinteger(L, -1);
-        lua_pop(L, 1);
+        if (sscanf(line, "%ld %d %255s %255[^\n]", &id, &size, path, json) < 4)
+            continue;
 
-        lua_getfield(L, -1, "height");
-        int height = luaL_checkinteger(L, -1);
-        lua_pop(L, 1);
+        if (!strstr(json, "\"type\":\"bitmap\""))
+            continue;
 
-        lua_getfield(L, -1, "ntiles");
-        int ntiles = luaL_checkinteger(L, -1);
-        lua_pop(L, 1);
+        int width = 0, height = 0, ntiles = 1;
+        char *p;
 
-        add_sprite_in_memory(name, data, width, height, ntiles);
+        p = strstr(json, "\"width\":");
+        if (p) sscanf(p + 8, "%d", &width);
 
-        lua_pop(L, 1);
+        p = strstr(json, "\"height\":");
+        if (p) sscanf(p + 9, "%d", &height);
+
+        p = strstr(json, "\"tiles\":");
+        if (p) sscanf(p + 8, "%d", &ntiles);
+
+        char *slash = strchr(path, '/');
+        if (!slash) continue;
+
+        *slash = '\0';
+        const char *ns = path;
+        const char *key = slash + 1;
+
+        char full_path[512];
+        snprintf(full_path, sizeof(full_path), "%s/%s/%s", game_dir, ns, key);
+
+        // Get or create namespace sub-table
+        lua_getfield(L, -1, ns);
+        if (!lua_istable(L, -1)) {
+            lua_pop(L, 1);
+            lua_newtable(L);
+            lua_pushvalue(L, -1);
+            lua_setfield(L, -3, ns);
+        }
+
+        // Create entry table and set fields
+        lua_newtable(L);
+        lua_pushstring(L, full_path);
+        lua_setfield(L, -2, "path");
+        lua_pushinteger(L, width);
+        lua_setfield(L, -2, "width");
+        lua_pushinteger(L, height);
+        lua_setfield(L, -2, "height");
+        lua_pushinteger(L, ntiles);
+        lua_setfield(L, -2, "ntiles");
+
+        lua_setfield(L, -2, key); // ns_table[key] = entry
+        lua_pop(L, 1);            // pop ns_table
     }
 
-    lua_pop(L, 1);
+    fclose(f);
+    lua_setglobal(L, "Sprites");
 }
