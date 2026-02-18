@@ -21,7 +21,7 @@ typedef struct {
     int y1;
     int x2;
     int y2;
-    Color color;
+    int color_index;
 } LineItem;
 
 // Rect
@@ -31,7 +31,7 @@ typedef struct {
     int width;
     int height;
     bool filled;
-    Color color;
+    int color_index;
     uint8_t fill_pattern[8];
 } RectItem;
 
@@ -42,8 +42,8 @@ typedef struct {
     int radius;
     bool filled;
     bool has_border;
-    Color border_color;
-    Color color;
+    int border_color_index;
+    int color_index;
     uint8_t fill_pattern[8];
 } CircleItem;
 
@@ -55,7 +55,7 @@ typedef struct {
     int p2_y;
     int p3_x;
     int p3_y;
-    Color color;
+    int color_index;
 } TriangleItem;
 
 // Sprite In Memory
@@ -94,7 +94,7 @@ typedef struct {
 
 // Clear Drawable
 typedef struct {
-    Color color;
+    int color_index;
 } ClearItem;
 
 // List Objects

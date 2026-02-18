@@ -15,19 +15,19 @@ void add_drawable(void *drawable, char type);
 void add_text(char *text_s, int x, int y);
 void draw_text(TextItem *text);
 
-void add_line(int x1, int y1, int x2, int y2, Color color);
+void add_line(int x1, int y1, int x2, int y2, Color color, int color_index);
 void draw_line(LineItem *line);
 
-void add_rect(int x, int y, int width, int height, bool filled, Color color);
+void add_rect(int x, int y, int width, int height, bool filled, int color_index);
 void draw_rect(RectItem *rect);
 
-void add_circle(int center_x, int center_y, int radius, bool filled, Color color, bool has_border, Color border_color);
+void add_circle(int center_x, int center_y, int radius, bool filled, int color_index, bool has_border, int border_color_index);
 void draw_circle(CircleItem *circle);
 
-void add_clear(Color color);
+void add_clear(int color_index);
 void draw_clear(ClearItem *clear);
 
-void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, Color color);
+void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, int color_index);
 void draw_triangle(TriangleItem *triangle);
 
 void add_tile(SpriteInMemory *sprite_in_memory, int tile_index, int x, int y, bool flipped);
@@ -52,9 +52,36 @@ extern uint8_t fill_pattern[8];
 Sprites In Memory Functions
 */
 extern SpritesInMemory sprites_in_memory;
-void load_sprites_in_memory_from_lua(lua_State *L);
+void inject_sprites_global(lua_State *L, const char *manifest_path, const char *game_dir);
 void add_sprite_in_memory(char *name, char *data, int width, int height, int ntiles);
 SpriteInMemory* get_sprite_in_memory(char *name);
+
+/*
+Camera Functions
+*/
+extern int camera_x;
+extern int camera_y;
+void set_camera(int x, int y);
+void reset_camera(void);
+
+/*
+Clip Functions
+*/
+void set_clip(int x, int y, int w, int h);
+void reset_clip(void);
+
+/*
+Frame Buffer Functions
+*/
+extern char frame_buffer[270][480];
+void fb_set(int x, int y, int color);
+void clear_frame_buffer();
+void draw_frame_buffer();
+
+/*
+Print (bitmap font) Functions
+*/
+void draw_print(const char *text, int x, int y, int color_index);
 
 /*
 Lua Functions
@@ -76,6 +103,7 @@ int lua_btnp(lua_State *L);
 int lua_fillp(lua_State *L);
 int lua_log(lua_State *L);
 int lua_cls(lua_State *L);
+int lua_map(lua_State *L);
 
 // TODO
 int lua_camera(lua_State *L);

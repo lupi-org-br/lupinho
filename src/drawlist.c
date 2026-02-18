@@ -2,17 +2,58 @@
 #include <stdio.h>
 
 #include "drawlist.h"
+#include "font.h"
 
 /*
 Global vars
 */
 extern Drawlist drawlist;
+extern const int screenWidth;
+extern const int screenHeight;
+char frame_buffer[270][480];
 Color palette[PALETTE_SIZE];
 
 /*
 Fill pattern
 */
 uint8_t fill_pattern[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+/*
+Camera
+*/
+int camera_x = 0;
+int camera_y = 0;
+
+void set_camera(int x, int y) { camera_x = x; camera_y = y; }
+void reset_camera(void)       { camera_x = 0; camera_y = 0; }
+
+/*
+Clip region
+*/
+int  clip_x = 0;
+int  clip_y = 0;
+int  clip_w = 0;
+int  clip_h = 0;
+bool clip_enabled = false;
+
+void set_clip(int x, int y, int w, int h) {
+    clip_x = x; clip_y = y; clip_w = w; clip_h = h;
+    clip_enabled = true;
+}
+void reset_clip(void) { clip_enabled = false; }
+
+/*
+Frame buffer pixel write — enforces bounds and clip region.
+All drawing functions must use this instead of writing frame_buffer directly.
+*/
+void fb_set(int x, int y, int color) {
+    if (x < 0 || x >= screenWidth || y < 0 || y >= screenHeight) return;
+    if (clip_enabled) {
+        if (x < clip_x || x >= clip_x + clip_w ||
+            y < clip_y || y >= clip_y + clip_h) return;
+    }
+    frame_buffer[y][x] = (char)color;
+}
 
 bool should_draw_pixel_with_pattern(int x, int y, uint8_t pattern[8]) {
     bool is_solid = true;
@@ -37,21 +78,6 @@ void draw(NodeDrawable *node) {
     switch(node->type) {
         case 't':
             draw_text((TextItem *) node->drawable);
-            break;
-        case 'l':
-            draw_line((LineItem *) node->drawable);
-            break;
-        case 'r':
-            draw_rect((RectItem *) node->drawable);
-            break;
-        case 'c':
-            draw_circle((CircleItem *) node->drawable);
-            break;
-        case 'y':
-            draw_clear((ClearItem *) node->drawable);
-            break;
-        case 'v':
-            draw_triangle((TriangleItem *) node->drawable);
             break;
         case 's':
             draw_tile((TileItem *) node->drawable);
@@ -120,142 +146,238 @@ void draw_text(TextItem *text) {
 /**
 Line Functions
 **/
-void add_line(int x1, int y1, int x2, int y2, Color color) {
-    LineItem *line = (LineItem *) malloc(sizeof(LineItem));
-    line->x1 = x1;
-    line->y1 = y1;
-    line->x2 = x2;
-    line->y2 = y2;
-    line->color = color;
+void add_line(int x1, int y1, int x2, int y2, Color color, int color_index) {
+    LineItem line = {
+        .x1 = x1,
+        .y1 = y1,
+        .x2 = x2,
+        .y2 = y2,
+        .color_index = color_index,
+    };
 
-    add_drawable(line, 'l');
+    draw_line(&line);
 }
 
 void draw_line(LineItem *line) {
-    DrawLine(line->x1, line->y1, line->x2, line->y2, line->color);
+    int x1 = line->x1 - camera_x;
+    int y1 = line->y1 - camera_y;
+    int x2 = line->x2 - camera_x;
+    int y2 = line->y2 - camera_y;
+
+    // Bresenham's line algorithm
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx - dy;
+
+    int x = x1;
+    int y = y1;
+
+    while(1) {
+        fb_set(x, y, line->color_index);
+
+        if(x == x2 && y == y2) break;
+
+        int e2 = 2 * err;
+        if(e2 > -dy) { err -= dy; x += sx; }
+        if(e2 < dx)  { err += dx; y += sy; }
+    }
 }
 
 /**
 Rect Functions
 **/
-void add_rect(int x, int y, int width, int height, bool filled, Color color) {
-    RectItem *rect = (RectItem *) malloc(sizeof(RectItem));
-    rect->x = x;
-    rect->y = y;
-    rect->width = width;
-    rect->height = height;
-    rect->filled = filled;
-    rect->color = color;
-    memcpy(rect->fill_pattern, fill_pattern, sizeof(fill_pattern));
+void add_rect(int x, int y, int width, int height, bool filled, int color_index) {
+    RectItem rect = {
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
+        .filled = filled,
+        .color_index = color_index,
+    };
+    memcpy(rect.fill_pattern, fill_pattern, sizeof(fill_pattern));
 
-    add_drawable(rect, 'r');
+    draw_rect(&rect);
 }
 
 void draw_rect(RectItem *rect) {
+    int rx = rect->x - camera_x;
+    int ry = rect->y - camera_y;
+    int rw = rect->width;
+    int rh = rect->height;
+
     if(rect->filled) {
         bool has_pattern = false;
         for (int i = 0; i < 8; i++) {
-            if (rect->fill_pattern[i] != 0) {
-                has_pattern = true;
-                break;
-            }
+            if (rect->fill_pattern[i] != 0) { has_pattern = true; break; }
         }
 
-        if (has_pattern) {
-            for (int y = rect->y; y < rect->y + rect->height; y++) {
-                for (int x = rect->x; x < rect->x + rect->width; x++) {
-                    if (should_draw_pixel_with_pattern(x, y, rect->fill_pattern)) {
-                        DrawPixel(x, y, rect->color);
-                    }
+        for (int py = ry; py < ry + rh; py++) {
+            for (int px = rx; px < rx + rw; px++) {
+                if (has_pattern) {
+                    if (should_draw_pixel_with_pattern(px, py, rect->fill_pattern))
+                        fb_set(px, py, rect->color_index);
+                } else {
+                    fb_set(px, py, rect->color_index);
                 }
             }
-        } else {
-            DrawRectangle(rect->x, rect->y, rect->width, rect->height, rect->color);
         }
     } else {
-        DrawRectangleLines(rect->x, rect->y, rect->width, rect->height, rect->color);
+        // Top line
+        for (int px = rx; px < rx + rw; px++) fb_set(px, ry, rect->color_index);
+        // Bottom line
+        for (int px = rx; px < rx + rw; px++) fb_set(px, ry + rh - 1, rect->color_index);
+        // Left line
+        for (int py = ry; py < ry + rh; py++) fb_set(rx, py, rect->color_index);
+        // Right line
+        for (int py = ry; py < ry + rh; py++) fb_set(rx + rw - 1, py, rect->color_index);
     }
 }
 
 /**
 Circle Functions
 **/
-void add_circle(int center_x, int center_y, int radius, bool filled, Color color, bool has_border, Color border_color) {
-    CircleItem *circle = (CircleItem *) malloc(sizeof(CircleItem));
-    circle->center_x = center_x;
-    circle->center_y = center_y;
-    circle->radius = radius;
-    circle->filled = filled;
-    circle->color = color;
-    circle->has_border = has_border;
-    circle->border_color = border_color;
-    memcpy(circle->fill_pattern, fill_pattern, sizeof(fill_pattern));
+void add_circle(int center_x, int center_y, int radius, bool filled, int color_index, bool has_border, int border_color_index) {
+    CircleItem circle = {
+        .center_x = center_x,
+        .center_y = center_y,
+        .radius = radius,
+        .filled = filled,
+        .color_index = color_index,
+        .has_border = has_border,
+        .border_color_index = border_color_index,
+    };
+    memcpy(circle.fill_pattern, fill_pattern, sizeof(fill_pattern));
 
-    add_drawable(circle, 'c');
+    draw_circle(&circle);
+}
+
+// Helper function to draw circle pixels using midpoint algorithm
+void draw_circle_pixels(int cx, int cy, int x, int y, int color_index) {
+    fb_set(cx + x, cy + y, color_index);
+    fb_set(cx - x, cy + y, color_index);
+    fb_set(cx + x, cy - y, color_index);
+    fb_set(cx - x, cy - y, color_index);
+    fb_set(cx + y, cy + x, color_index);
+    fb_set(cx - y, cy + x, color_index);
+    fb_set(cx + y, cy - x, color_index);
+    fb_set(cx - y, cy - x, color_index);
 }
 
 void draw_circle(CircleItem *circle) {
+    int cx = circle->center_x - camera_x;
+    int cy = circle->center_y - camera_y;
+
     if(circle->filled) {
         bool has_pattern = false;
         for (int i = 0; i < 8; i++) {
-            if (circle->fill_pattern[i] != 0) {
-                has_pattern = true;
-                break;
-            }
+            if (circle->fill_pattern[i] != 0) { has_pattern = true; break; }
         }
 
-        if (has_pattern) {
-            int radius_squared = circle->radius * circle->radius;
-            for (int y = circle->center_y - circle->radius; y <= circle->center_y + circle->radius; y++) {
-                for (int x = circle->center_x - circle->radius; x <= circle->center_x + circle->radius; x++) {
-                    int dx = x - circle->center_x;
-                    int dy = y - circle->center_y;
-                    if (dx * dx + dy * dy <= radius_squared) {
-                        if (should_draw_pixel_with_pattern(x, y, circle->fill_pattern)) {
-                            DrawPixel(x, y, circle->color);
-                        }
+        int radius_squared = circle->radius * circle->radius;
+        for (int py = cy - circle->radius; py <= cy + circle->radius; py++) {
+            for (int px = cx - circle->radius; px <= cx + circle->radius; px++) {
+                int dx = px - cx;
+                int dy = py - cy;
+                if (dx * dx + dy * dy <= radius_squared) {
+                    if (has_pattern) {
+                        if (should_draw_pixel_with_pattern(px, py, circle->fill_pattern))
+                            fb_set(px, py, circle->color_index);
+                    } else {
+                        fb_set(px, py, circle->color_index);
                     }
                 }
             }
-        } else {
-            DrawCircle(circle->center_x, circle->center_y, circle->radius, circle->color);
         }
     }
 
     if(circle->has_border) {
-        DrawCircleLines(circle->center_x, circle->center_y, circle->radius, circle->border_color);
+        int x = 0;
+        int y = circle->radius;
+        int d = 1 - circle->radius;
+
+        draw_circle_pixels(cx, cy, x, y, circle->border_color_index);
+
+        while (x < y) {
+            if (d < 0) {
+                d = d + 2 * x + 3;
+            } else {
+                d = d + 2 * (x - y) + 5;
+                y--;
+            }
+            x++;
+            draw_circle_pixels(cx, cy, x, y, circle->border_color_index);
+        }
     }
 }
 
 /**
 Triangle Functions
 **/
-void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, Color color) {
-    TriangleItem *triangle = (TriangleItem *) malloc(sizeof(TriangleItem));
-    triangle->p1_x = p1_x;
-    triangle->p1_y = p1_y;
-    triangle->p2_x = p2_x;
-    triangle->p2_y = p2_y;
-    triangle->p3_x = p3_x;
-    triangle->p3_y = p3_y;
-    triangle->color = color;
+void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, int color_index) {
+    TriangleItem triangle = {
+        .p1_x = p1_x,
+        .p1_y = p1_y,
+        .p2_x = p2_x,
+        .p2_y = p2_y,
+        .p3_x = p3_x,
+        .p3_y = p3_y,
+        .color_index = color_index,
+    };
 
-    add_drawable(triangle, 'v');
+    draw_triangle(&triangle);
+}
+
+// Helper function to draw a horizontal line for triangle filling
+void draw_horizontal_line_fb(int x1, int x2, int y, int color_index) {
+    if (x1 > x2) { int tmp = x1; x1 = x2; x2 = tmp; }
+    for (int x = x1; x <= x2; x++) fb_set(x, y, color_index);
 }
 
 void draw_triangle(TriangleItem *triangle) {
-    Vector2 v1 = { triangle->p1_x, triangle->p1_y };
-    Vector2 v2 = { triangle->p2_x, triangle->p2_y };
-    Vector2 v3 = { triangle->p3_x, triangle->p3_y };
+    // Sort vertices by Y coordinate (v1.y <= v2.y <= v3.y)
+    int x1 = triangle->p1_x - camera_x, y1 = triangle->p1_y - camera_y;
+    int x2 = triangle->p2_x - camera_x, y2 = triangle->p2_y - camera_y;
+    int x3 = triangle->p3_x - camera_x, y3 = triangle->p3_y - camera_y;
 
-    // Ensure counter-clockwise order as required by raylib's DrawTriangle.
-    // In screen coordinates (Y-down), the cross product sign is flipped,
-    // so we swap vertices when cross >= 0 to get the correct winding.
-    float cross = (v2.x - v1.x) * (v3.y - v1.y) - (v2.y - v1.y) * (v3.x - v1.x);
-    if (cross < 0) {
-        DrawTriangle(v1, v2, v3, triangle->color);
-    } else {
-        DrawTriangle(v1, v3, v2, triangle->color);
+    // Bubble sort by Y
+    if (y1 > y2) {
+        int tmp = y1; y1 = y2; y2 = tmp;
+        tmp = x1; x1 = x2; x2 = tmp;
+    }
+    if (y2 > y3) {
+        int tmp = y2; y2 = y3; y3 = tmp;
+        tmp = x2; x2 = x3; x3 = tmp;
+    }
+    if (y1 > y2) {
+        int tmp = y1; y1 = y2; y2 = tmp;
+        tmp = x1; x1 = x2; x2 = tmp;
+    }
+
+    // Degenerate triangle (all points on same horizontal line)
+    if (y1 == y3) {
+        int minX = x1 < x2 ? (x1 < x3 ? x1 : x3) : (x2 < x3 ? x2 : x3);
+        int maxX = x1 > x2 ? (x1 > x3 ? x1 : x3) : (x2 > x3 ? x2 : x3);
+        draw_horizontal_line_fb(minX, maxX, y1, triangle->color_index);
+        return;
+    }
+
+    // Draw triangle using scanline algorithm
+    for (int y = y1; y <= y3; y++) {
+        bool secondHalf = y > y2 || y2 == y1;
+        int segmentHeight = secondHalf ? y3 - y2 : y2 - y1;
+
+        if (segmentHeight == 0) continue;
+
+        float alpha = (float)(y - y1) / (float)(y3 - y1);
+        float beta = secondHalf ? (float)(y - y2) / (float)(y3 - y2) : (float)(y - y1) / (float)(y2 - y1);
+
+        int xa = x1 + (int)((x3 - x1) * alpha);
+        int xb = secondHalf ? x2 + (int)((x3 - x2) * beta) : x1 + (int)((x2 - x1) * beta);
+
+        draw_horizontal_line_fb(xa, xb, y, triangle->color_index);
     }
 }
 
@@ -353,15 +475,19 @@ Color get_palette_color(int index) {
 /**
 Clear Functions
 **/
-void add_clear(Color color) {
-    ClearItem *clear = (ClearItem *) malloc(sizeof(ClearItem));
-    clear->color = color;
+void add_clear(int color_index) {
+    ClearItem clear = {
+        .color_index = color_index,
+    };
 
-    add_drawable(clear, 'y');
+    draw_clear(&clear);
 }
 
 void draw_clear(ClearItem *clear) {
-    ClearBackground(clear->color);
+    // Fill entire frame buffer with the color index
+    for (int y = 0; y < screenHeight; y++) {
+        memset(frame_buffer[y], clear->color_index, screenWidth);
+    }
 }
 
 /**
@@ -420,3 +546,68 @@ SpriteInMemory* get_sprite_in_memory(char *name) {
     }
     return NULL;
 }
+
+/*
+* Frame Buffer Functions
+*/
+Texture scene;
+
+Image generate_image_from_frame_buffer() {
+    Image image = GenImageColor(screenWidth, screenHeight, BLANK);
+    Color *pixels = (Color *)image.data;
+
+    for(int i = 0; i < screenHeight; i++) {
+        for(int j = 0; j < screenWidth; j++) {
+            int pixel_index = j + (screenWidth * i);
+            pixels[pixel_index] = get_palette_color(frame_buffer[i][j]);
+        }
+    }
+
+    return image;
+}
+
+void draw_frame_buffer() {
+    Image image = generate_image_from_frame_buffer();
+    scene = LoadTextureFromImage(image);
+ 
+    Rectangle source = { 0, 0, screenWidth, screenHeight };
+    Rectangle dest = { 0, 0, screenWidth, screenHeight };
+    Vector2 origin = { 0, 0 };
+
+    DrawTexturePro(scene, source, dest, origin, 0, WHITE);
+    UnloadImage(image);
+}
+
+void clear_frame_buffer() {
+    for(int i = 0; i < screenHeight; i++) {
+        memset(frame_buffer[i], 0, screenWidth);
+    }
+
+    UnloadTexture(scene);
+}
+
+/*
+* Print (bitmap font) Functions
+*/
+void draw_print(const char *text, int x, int y, int color_index) {
+    int cursor_x = x - camera_x;
+    int base_y   = y - camera_y;
+
+    for (int i = 0; text[i] != '\0'; i++) {
+        unsigned char c = (unsigned char)text[i];
+
+        if (c < 32 || c > 126) continue;
+
+        const uint8_t *glyph = font_data[c - 32];
+
+        for (int col = 0; col < FONT_CHAR_WIDTH; col++) {
+            for (int row = 0; row < FONT_CHAR_HEIGHT; row++) {
+                if (glyph[col] & (1 << row))
+                    fb_set(cursor_x + col, base_y + row, color_index);
+            }
+        }
+
+        cursor_x += FONT_CHAR_ADVANCE;
+    }
+}
+

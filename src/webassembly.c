@@ -1,16 +1,10 @@
 #include "drawlist.h"
 
+#include <stdlib.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 #include "raylib.h"
-
-/**
-Global objects
-**/
-Drawlist drawlist;
-lua_State *globalLuaState = NULL;
-SpritesInMemory sprites_in_memory;
 
 /**
 Constants
@@ -19,12 +13,24 @@ const int screenWidth = 480;
 const int screenHeight = 270;
 const int initial_sprites_in_memory_count = 10;
 
+/**
+Global objects
+**/
+Drawlist drawlist;
+lua_State *globalLuaState = NULL;
+SpritesInMemory sprites_in_memory;
+
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
 #endif
 
-void UpdateDrawFrame(void)
-{
+static int lua_sprites_loader(lua_State *L) {
+    inject_sprites_global(L, "game-example/lupi_manifest.txt", "game-example");
+    lua_getglobal(L, "Sprites");
+    return 1;
+}
+
+void UpdateDrawFrame() {
     if (globalLuaState != NULL) {
         lua_getglobal(globalLuaState, "update");
         if (lua_isfunction(globalLuaState, -1)) {
@@ -48,6 +54,8 @@ void UpdateDrawFrame(void)
         node = node->next;
     }
 
+    draw_frame_buffer();
+
     #ifndef PRODUCTION
     DrawFPS(10, 10); // DEBUG
     #endif
@@ -55,10 +63,10 @@ void UpdateDrawFrame(void)
     EndDrawing();
 
     clear_drawlist();
+    clear_frame_buffer();
 }
 
-int main(void)
-{
+int main() {
     sprites_in_memory.count = 0;
     sprites_in_memory.max_count = initial_sprites_in_memory_count;
     sprites_in_memory.sprites = (SpriteInMemory **) calloc(sprites_in_memory.max_count, sizeof(SpriteInMemory *));
@@ -129,6 +137,9 @@ int main(void)
     lua_pushcfunction(globalLuaState, lua_print);
     lua_setfield(globalLuaState, -2, "print");
 
+    lua_pushcfunction(globalLuaState, lua_map);
+    lua_setfield(globalLuaState, -2, "map");
+
     lua_pushcfunction(globalLuaState, lua_set_pallet);
     lua_setfield(globalLuaState, -2, "set_pallet");
 
@@ -163,6 +174,12 @@ int main(void)
     lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
     lua_setglobal(globalLuaState, "BTN_Z");
 
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_TRIGGER_1);
+    lua_setglobal(globalLuaState, "BTN_F");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_TRIGGER_1);
+    lua_setglobal(globalLuaState, "BTN_G");
+
     InitWindow(screenWidth, screenHeight, "Lupi Emulator");
 
     // Add game-example directory to Lua's package.path so require() can find modules there
@@ -174,12 +191,18 @@ int main(void)
     lua_pushfstring(globalLuaState, "%s;./game-example/?.lua", current_path);
     lua_setfield(globalLuaState, -2, "path");
 
+    // Register sprites as a lazy preload: built only when require("sprites") is called
+    lua_getglobal(globalLuaState, "package");
+    lua_getfield(globalLuaState, -1, "preload");
+    lua_pushcfunction(globalLuaState, lua_sprites_loader);
+    lua_setfield(globalLuaState, -2, "sprites");
+    lua_pop(globalLuaState, 2); // pop preload and package
+
     if (luaL_dofile(globalLuaState, "game-example/game.lua") != LUA_OK) {
         printf("Error loading game-example/game.lua: %s\n", lua_tostring(globalLuaState, -1));
         lua_pop(globalLuaState, 1);
     } else {
         printf("Game-example/game.lua loaded successfully\n");
-        load_sprites_in_memory_from_lua(globalLuaState);
     }
 
     SetTargetFPS(60);
