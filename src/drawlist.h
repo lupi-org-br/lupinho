@@ -103,6 +103,7 @@ int lua_btnp(lua_State *L);
 int lua_fillp(lua_State *L);
 int lua_log(lua_State *L);
 int lua_cls(lua_State *L);
+int lua_map(lua_State *L);
 
 // TODO
 int lua_camera(lua_State *L);

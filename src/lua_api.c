@@ -372,6 +372,131 @@ int lua_fillp(lua_State *L) {
 // TODO
 
 //----------------------------------------------------------------------------------
+// ui.map(map_data, cam_x, cam_y)
+// map_data: table with lupi_metadata {width,height,tile_size} and
+//           tileset keys {[tile_position]=tile_id, ...} (1-indexed, sparse)
+// cam_x/cam_y: screen-space offset where the map is drawn
+//----------------------------------------------------------------------------------
+int lua_map(lua_State *L) {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    int cam_x = (int)luaL_checknumber(L, 2);
+    int cam_y = (int)luaL_checknumber(L, 3);
+
+    // --- read lupi_metadata ---
+    lua_getfield(L, 1, "lupi_metadata");        // [4]
+    if (!lua_istable(L, -1)) { lua_pop(L, 1); return 0; }
+
+    lua_getfield(L, 4, "width");
+    int map_width  = (int)lua_tonumber(L, -1); lua_pop(L, 1);
+
+    lua_getfield(L, 4, "height");
+    int map_height = (int)lua_tonumber(L, -1); lua_pop(L, 1);
+
+    lua_getfield(L, 4, "tile_size");
+    int tile_size  = (int)lua_tonumber(L, -1); lua_pop(L, 1);
+
+    lua_pop(L, 1); // pop lupi_metadata
+
+    if (map_width <= 0 || map_height <= 0 || tile_size <= 0) return 0;
+
+    // --- get Sprites.map ---
+    lua_getglobal(L, "Sprites");                // [4]
+    if (!lua_istable(L, -1)) { lua_pop(L, 1); return 0; }
+
+    lua_getfield(L, 4, "map");                  // [5]
+    if (!lua_istable(L, -1)) { lua_pop(L, 2); return 0; }
+
+    // --- iterate over tileset keys in map_data ---
+    lua_pushnil(L);                             // [6] first key
+    while (lua_next(L, 1) != 0) {
+        // [6]=key  [7]=value (tile data table)
+
+        if (lua_type(L, 6) != LUA_TSTRING || !lua_istable(L, 7)) {
+            lua_pop(L, 1); continue;
+        }
+
+        const char *tileset_name = lua_tostring(L, 6);
+        if (strcmp(tileset_name, "lupi_metadata") == 0) {
+            lua_pop(L, 1); continue;
+        }
+
+        // get Sprites.map[tileset_name]
+        lua_getfield(L, 5, tileset_name);       // [8]
+        if (!lua_istable(L, -1)) {
+            lua_pop(L, 2); continue;
+        }
+
+        lua_getfield(L, 8, "path");
+        const char *path = lua_tostring(L, -1); lua_pop(L, 1);
+
+        lua_getfield(L, 8, "width");
+        int tile_w = (int)lua_tonumber(L, -1);  lua_pop(L, 1);
+
+        lua_getfield(L, 8, "height");
+        int tile_h = (int)lua_tonumber(L, -1);  lua_pop(L, 1);
+
+        lua_pop(L, 1); // pop Sprites.map[tileset_name] [8]
+
+        if (!path || tile_w <= 0 || tile_h <= 0) {
+            lua_pop(L, 1); continue;
+        }
+
+        // read the entire tileset file into memory once
+        FILE *f = fopen(path, "rb");
+        if (!f) { lua_pop(L, 1); continue; }
+
+        fseek(f, 0, SEEK_END);
+        long file_size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        unsigned char *file_buf = (unsigned char *)malloc(file_size);
+        if (!file_buf) { fclose(f); lua_pop(L, 1); continue; }
+
+        fread(file_buf, 1, file_size, f);
+        fclose(f);
+
+        int tile_pixels = tile_w * tile_h;
+
+        // draw each tile
+        for (int map_idx = 1; map_idx <= map_width * map_height; map_idx++) {
+            lua_rawgeti(L, 7, map_idx);         // [8] tile_id or nil
+            if (lua_isnil(L, -1)) { lua_pop(L, 1); continue; }
+
+            int tile_id_flags = (int)lua_tonumber(L, -1);
+            lua_pop(L, 1);
+
+            bool flipped = (tile_id_flags & 1024) != 0;
+            int tile_id  = tile_id_flags & ~1024;
+
+            long offset = (long)tile_id * tile_pixels;
+            if (offset < 0 || offset + tile_pixels > file_size) continue;
+
+            int col = (map_idx - 1) % map_width;
+            int row = (map_idx - 1) / map_width;
+            int sx  = col * tile_size + cam_x;
+            int sy  = row * tile_size + cam_y;
+
+            unsigned char *tile_data = file_buf + offset;
+
+            for (int ty = 0; ty < tile_h; ty++) {
+                for (int tx = 0; tx < tile_w; tx++) {
+                    unsigned char idx = tile_data[ty * tile_w + tx];
+                    if (idx == 0) continue;
+                    int px = flipped ? (sx + tile_w - 1 - tx) : (sx + tx);
+                    fb_set(px, sy + ty, idx);
+                }
+            }
+        }
+
+        free(file_buf);
+        lua_pop(L, 1); // pop value [7], keep key for next iteration
+    }
+
+    lua_pop(L, 2); // pop Sprites.map [5] and Sprites [4]
+    return 0;
+}
+
+//----------------------------------------------------------------------------------
 // ui.camera(x, y) — offset all drawing; ui.camera() resets to (0, 0)
 //----------------------------------------------------------------------------------
 int lua_camera(lua_State *L) {

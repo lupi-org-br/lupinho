@@ -137,6 +137,9 @@ int main() {
     lua_pushcfunction(globalLuaState, lua_print);
     lua_setfield(globalLuaState, -2, "print");
 
+    lua_pushcfunction(globalLuaState, lua_map);
+    lua_setfield(globalLuaState, -2, "map");
+
     lua_pushcfunction(globalLuaState, lua_set_pallet);
     lua_setfield(globalLuaState, -2, "set_pallet");
 
