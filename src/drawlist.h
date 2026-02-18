@@ -57,9 +57,24 @@ void add_sprite_in_memory(char *name, char *data, int width, int height, int nti
 SpriteInMemory* get_sprite_in_memory(char *name);
 
 /*
+Camera Functions
+*/
+extern int camera_x;
+extern int camera_y;
+void set_camera(int x, int y);
+void reset_camera(void);
+
+/*
+Clip Functions
+*/
+void set_clip(int x, int y, int w, int h);
+void reset_clip(void);
+
+/*
 Frame Buffer Functions
 */
 extern char frame_buffer[270][480];
+void fb_set(int x, int y, int color);
 void clear_frame_buffer();
 void draw_frame_buffer();
 

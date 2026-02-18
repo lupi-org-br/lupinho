@@ -18,6 +18,43 @@ Fill pattern
 */
 uint8_t fill_pattern[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
+/*
+Camera
+*/
+int camera_x = 0;
+int camera_y = 0;
+
+void set_camera(int x, int y) { camera_x = x; camera_y = y; }
+void reset_camera(void)       { camera_x = 0; camera_y = 0; }
+
+/*
+Clip region
+*/
+int  clip_x = 0;
+int  clip_y = 0;
+int  clip_w = 0;
+int  clip_h = 0;
+bool clip_enabled = false;
+
+void set_clip(int x, int y, int w, int h) {
+    clip_x = x; clip_y = y; clip_w = w; clip_h = h;
+    clip_enabled = true;
+}
+void reset_clip(void) { clip_enabled = false; }
+
+/*
+Frame buffer pixel write — enforces bounds and clip region.
+All drawing functions must use this instead of writing frame_buffer directly.
+*/
+void fb_set(int x, int y, int color) {
+    if (x < 0 || x >= screenWidth || y < 0 || y >= screenHeight) return;
+    if (clip_enabled) {
+        if (x < clip_x || x >= clip_x + clip_w ||
+            y < clip_y || y >= clip_y + clip_h) return;
+    }
+    frame_buffer[y][x] = (char)color;
+}
+
 bool should_draw_pixel_with_pattern(int x, int y, uint8_t pattern[8]) {
     bool is_solid = true;
     for (int i = 0; i < 8; i++) {
@@ -122,33 +159,29 @@ void add_line(int x1, int y1, int x2, int y2, Color color, int color_index) {
 }
 
 void draw_line(LineItem *line) {
+    int x1 = line->x1 - camera_x;
+    int y1 = line->y1 - camera_y;
+    int x2 = line->x2 - camera_x;
+    int y2 = line->y2 - camera_y;
+
     // Bresenham's line algorithm
-    int dx = abs(line->x2 - line->x1);
-    int dy = abs(line->y2 - line->y1);
-    int sx = (line->x1 < line->x2) ? 1 : -1;
-    int sy = (line->y1 < line->y2) ? 1 : -1;
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
     int err = dx - dy;
 
-    int x = line->x1;
-    int y = line->y1;
+    int x = x1;
+    int y = y1;
 
     while(1) {
-        if (x >= 0 && x < screenWidth && y >= 0 && y < screenHeight) {
-            frame_buffer[y][x] = line->color_index;
-        }
+        fb_set(x, y, line->color_index);
 
-        if(x == line->x2 && y == line->y2) break;
+        if(x == x2 && y == y2) break;
 
         int e2 = 2 * err;
-        if(e2 > -dy) {
-            err -= dy;
-            x += sx;
-        }
-
-        if(e2 < dx) {
-            err += dx;
-            y += sy;
-        }
+        if(e2 > -dy) { err -= dy; x += sx; }
+        if(e2 < dx)  { err += dx; y += sy; }
     }
 }
 
@@ -170,64 +203,36 @@ void add_rect(int x, int y, int width, int height, bool filled, int color_index)
 }
 
 void draw_rect(RectItem *rect) {
+    int rx = rect->x - camera_x;
+    int ry = rect->y - camera_y;
+    int rw = rect->width;
+    int rh = rect->height;
+
     if(rect->filled) {
         bool has_pattern = false;
         for (int i = 0; i < 8; i++) {
-            if (rect->fill_pattern[i] != 0) {
-                has_pattern = true;
-                break;
-            }
+            if (rect->fill_pattern[i] != 0) { has_pattern = true; break; }
         }
 
-        if (has_pattern) {
-            // Draw filled rectangle with pattern to frame buffer
-            for (int py = rect->y; py < rect->y + rect->height; py++) {
-                for (int px = rect->x; px < rect->x + rect->width; px++) {
-                    if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
-                        if (should_draw_pixel_with_pattern(px, py, rect->fill_pattern)) {
-                            frame_buffer[py][px] = rect->color_index;
-                        }
-                    }
-                }
-            }
-        } else {
-            // Draw filled rectangle to frame buffer
-            for (int py = rect->y; py < rect->y + rect->height; py++) {
-                for (int px = rect->x; px < rect->x + rect->width; px++) {
-                    if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
-                        frame_buffer[py][px] = rect->color_index;
-                    }
+        for (int py = ry; py < ry + rh; py++) {
+            for (int px = rx; px < rx + rw; px++) {
+                if (has_pattern) {
+                    if (should_draw_pixel_with_pattern(px, py, rect->fill_pattern))
+                        fb_set(px, py, rect->color_index);
+                } else {
+                    fb_set(px, py, rect->color_index);
                 }
             }
         }
     } else {
-        // Draw rectangle outline to frame buffer (4 lines)
         // Top line
-        for (int px = rect->x; px < rect->x + rect->width; px++) {
-            if (px >= 0 && px < screenWidth && rect->y >= 0 && rect->y < screenHeight) {
-                frame_buffer[rect->y][px] = rect->color_index;
-            }
-        }
+        for (int px = rx; px < rx + rw; px++) fb_set(px, ry, rect->color_index);
         // Bottom line
-        int bottom = rect->y + rect->height - 1;
-        for (int px = rect->x; px < rect->x + rect->width; px++) {
-            if (px >= 0 && px < screenWidth && bottom >= 0 && bottom < screenHeight) {
-                frame_buffer[bottom][px] = rect->color_index;
-            }
-        }
+        for (int px = rx; px < rx + rw; px++) fb_set(px, ry + rh - 1, rect->color_index);
         // Left line
-        for (int py = rect->y; py < rect->y + rect->height; py++) {
-            if (rect->x >= 0 && rect->x < screenWidth && py >= 0 && py < screenHeight) {
-                frame_buffer[py][rect->x] = rect->color_index;
-            }
-        }
+        for (int py = ry; py < ry + rh; py++) fb_set(rx, py, rect->color_index);
         // Right line
-        int right = rect->x + rect->width - 1;
-        for (int py = rect->y; py < rect->y + rect->height; py++) {
-            if (right >= 0 && right < screenWidth && py >= 0 && py < screenHeight) {
-                frame_buffer[py][right] = rect->color_index;
-            }
-        }
+        for (int py = ry; py < ry + rh; py++) fb_set(rx + rw - 1, py, rect->color_index);
     }
 }
 
@@ -251,50 +256,37 @@ void add_circle(int center_x, int center_y, int radius, bool filled, int color_i
 
 // Helper function to draw circle pixels using midpoint algorithm
 void draw_circle_pixels(int cx, int cy, int x, int y, int color_index) {
-    // Draw 8 symmetric points
-    if (cx + x >= 0 && cx + x < screenWidth && cy + y >= 0 && cy + y < screenHeight)
-        frame_buffer[cy + y][cx + x] = color_index;
-    if (cx - x >= 0 && cx - x < screenWidth && cy + y >= 0 && cy + y < screenHeight)
-        frame_buffer[cy + y][cx - x] = color_index;
-    if (cx + x >= 0 && cx + x < screenWidth && cy - y >= 0 && cy - y < screenHeight)
-        frame_buffer[cy - y][cx + x] = color_index;
-    if (cx - x >= 0 && cx - x < screenWidth && cy - y >= 0 && cy - y < screenHeight)
-        frame_buffer[cy - y][cx - x] = color_index;
-    if (cx + y >= 0 && cx + y < screenWidth && cy + x >= 0 && cy + x < screenHeight)
-        frame_buffer[cy + x][cx + y] = color_index;
-    if (cx - y >= 0 && cx - y < screenWidth && cy + x >= 0 && cy + x < screenHeight)
-        frame_buffer[cy + x][cx - y] = color_index;
-    if (cx + y >= 0 && cx + y < screenWidth && cy - x >= 0 && cy - x < screenHeight)
-        frame_buffer[cy - x][cx + y] = color_index;
-    if (cx - y >= 0 && cx - y < screenWidth && cy - x >= 0 && cy - x < screenHeight)
-        frame_buffer[cy - x][cx - y] = color_index;
+    fb_set(cx + x, cy + y, color_index);
+    fb_set(cx - x, cy + y, color_index);
+    fb_set(cx + x, cy - y, color_index);
+    fb_set(cx - x, cy - y, color_index);
+    fb_set(cx + y, cy + x, color_index);
+    fb_set(cx - y, cy + x, color_index);
+    fb_set(cx + y, cy - x, color_index);
+    fb_set(cx - y, cy - x, color_index);
 }
 
 void draw_circle(CircleItem *circle) {
+    int cx = circle->center_x - camera_x;
+    int cy = circle->center_y - camera_y;
+
     if(circle->filled) {
         bool has_pattern = false;
         for (int i = 0; i < 8; i++) {
-            if (circle->fill_pattern[i] != 0) {
-                has_pattern = true;
-                break;
-            }
+            if (circle->fill_pattern[i] != 0) { has_pattern = true; break; }
         }
 
-        // Draw filled circle to frame buffer
         int radius_squared = circle->radius * circle->radius;
-        for (int py = circle->center_y - circle->radius; py <= circle->center_y + circle->radius; py++) {
-            for (int px = circle->center_x - circle->radius; px <= circle->center_x + circle->radius; px++) {
-                if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
-                    int dx = px - circle->center_x;
-                    int dy = py - circle->center_y;
-                    if (dx * dx + dy * dy <= radius_squared) {
-                        if (has_pattern) {
-                            if (should_draw_pixel_with_pattern(px, py, circle->fill_pattern)) {
-                                frame_buffer[py][px] = circle->color_index;
-                            }
-                        } else {
-                            frame_buffer[py][px] = circle->color_index;
-                        }
+        for (int py = cy - circle->radius; py <= cy + circle->radius; py++) {
+            for (int px = cx - circle->radius; px <= cx + circle->radius; px++) {
+                int dx = px - cx;
+                int dy = py - cy;
+                if (dx * dx + dy * dy <= radius_squared) {
+                    if (has_pattern) {
+                        if (should_draw_pixel_with_pattern(px, py, circle->fill_pattern))
+                            fb_set(px, py, circle->color_index);
+                    } else {
+                        fb_set(px, py, circle->color_index);
                     }
                 }
             }
@@ -302,12 +294,11 @@ void draw_circle(CircleItem *circle) {
     }
 
     if(circle->has_border) {
-        // Draw circle outline using midpoint circle algorithm
         int x = 0;
         int y = circle->radius;
         int d = 1 - circle->radius;
 
-        draw_circle_pixels(circle->center_x, circle->center_y, x, y, circle->border_color_index);
+        draw_circle_pixels(cx, cy, x, y, circle->border_color_index);
 
         while (x < y) {
             if (d < 0) {
@@ -317,7 +308,7 @@ void draw_circle(CircleItem *circle) {
                 y--;
             }
             x++;
-            draw_circle_pixels(circle->center_x, circle->center_y, x, y, circle->border_color_index);
+            draw_circle_pixels(cx, cy, x, y, circle->border_color_index);
         }
     }
 }
@@ -341,27 +332,15 @@ void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, in
 
 // Helper function to draw a horizontal line for triangle filling
 void draw_horizontal_line_fb(int x1, int x2, int y, int color_index) {
-    if (y < 0 || y >= screenHeight) return;
-
-    if (x1 > x2) {
-        int temp = x1;
-        x1 = x2;
-        x2 = temp;
-    }
-
-    if (x1 < 0) x1 = 0;
-    if (x2 >= screenWidth) x2 = screenWidth - 1;
-
-    for (int x = x1; x <= x2; x++) {
-        frame_buffer[y][x] = color_index;
-    }
+    if (x1 > x2) { int tmp = x1; x1 = x2; x2 = tmp; }
+    for (int x = x1; x <= x2; x++) fb_set(x, y, color_index);
 }
 
 void draw_triangle(TriangleItem *triangle) {
     // Sort vertices by Y coordinate (v1.y <= v2.y <= v3.y)
-    int x1 = triangle->p1_x, y1 = triangle->p1_y;
-    int x2 = triangle->p2_x, y2 = triangle->p2_y;
-    int x3 = triangle->p3_x, y3 = triangle->p3_y;
+    int x1 = triangle->p1_x - camera_x, y1 = triangle->p1_y - camera_y;
+    int x2 = triangle->p2_x - camera_x, y2 = triangle->p2_y - camera_y;
+    int x3 = triangle->p3_x - camera_x, y3 = triangle->p3_y - camera_y;
 
     // Bubble sort by Y
     if (y1 > y2) {
@@ -611,7 +590,8 @@ void clear_frame_buffer() {
 * Print (bitmap font) Functions
 */
 void draw_print(const char *text, int x, int y, int color_index) {
-    int cursor_x = x;
+    int cursor_x = x - camera_x;
+    int base_y   = y - camera_y;
 
     for (int i = 0; text[i] != '\0'; i++) {
         unsigned char c = (unsigned char)text[i];
@@ -622,13 +602,8 @@ void draw_print(const char *text, int x, int y, int color_index) {
 
         for (int col = 0; col < FONT_CHAR_WIDTH; col++) {
             for (int row = 0; row < FONT_CHAR_HEIGHT; row++) {
-                if (glyph[col] & (1 << row)) {
-                    int px = cursor_x + col;
-                    int py = y + row;
-                    if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
-                        frame_buffer[py][px] = (char)color_index;
-                    }
-                }
+                if (glyph[col] & (1 << row))
+                    fb_set(cursor_x + col, base_y + row, color_index);
             }
         }
 

@@ -162,8 +162,8 @@ int lua_tile(lua_State *L) {
     lua_pop(L, 1);
 
     int tile_index_with_flags = (int)luaL_checknumber(L, 2);
-    int x = (int)luaL_checknumber(L, 3);
-    int y = (int)luaL_checknumber(L, 4);
+    int x = (int)luaL_checknumber(L, 3) - camera_x;
+    int y = (int)luaL_checknumber(L, 4) - camera_y;
 
     bool flipped = (tile_index_with_flags & 1024) != 0;
     int tile_index = tile_index_with_flags & ~1024;
@@ -195,9 +195,7 @@ int lua_tile(lua_State *L) {
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
 
-            if (px >= 0 && px < 480 && py >= 0 && py < 270) {
-                frame_buffer[py][px] = idx;
-            }
+            fb_set(px, py, idx);
         }
     }
 
@@ -223,8 +221,8 @@ int lua_spr(lua_State *L) {
     int height = (int)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
-    int x = (int)luaL_checknumber(L, 2);
-    int y = (int)luaL_checknumber(L, 3);
+    int x = (int)luaL_checknumber(L, 2) - camera_x;
+    int y = (int)luaL_checknumber(L, 3) - camera_y;
 
     bool flipped = false;
     if (lua_gettop(L) > 3) {
@@ -255,9 +253,7 @@ int lua_spr(lua_State *L) {
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
 
-            if (px >= 0 && px < 480 && py >= 0 && py < 270) {
-                frame_buffer[py][px] = idx;
-            }
+            fb_set(px, py, idx);
         }
     }
 
@@ -376,24 +372,32 @@ int lua_fillp(lua_State *L) {
 // TODO
 
 //----------------------------------------------------------------------------------
-// ui.camera(x, y)
+// ui.camera(x, y) — offset all drawing; ui.camera() resets to (0, 0)
 //----------------------------------------------------------------------------------
 int lua_camera(lua_State *L) {
-    int x = (int)luaL_checknumber(L, 1);
-    int y = (int)luaL_checknumber(L, 2);
-
+    if (lua_gettop(L) == 0) {
+        reset_camera();
+    } else {
+        int x = (int)luaL_checknumber(L, 1);
+        int y = (int)luaL_checknumber(L, 2);
+        set_camera(x, y);
+    }
     return 0;
 }
 
 //----------------------------------------------------------------------------------
-// ui.clip(x, y, width, height)
+// ui.clip(x, y, w, h) — restrict drawing to region; ui.clip() resets
 //----------------------------------------------------------------------------------
 int lua_clip(lua_State *L) {
-    int x = (int)luaL_checknumber(L, 1);
-    int y = (int)luaL_checknumber(L, 2);
-    int width = (int)luaL_checknumber(L, 3);
-    int height = (int)luaL_checknumber(L, 4);
-
+    if (lua_gettop(L) == 0) {
+        reset_clip();
+    } else {
+        int x = (int)luaL_checknumber(L, 1);
+        int y = (int)luaL_checknumber(L, 2);
+        int w = (int)luaL_checknumber(L, 3);
+        int h = (int)luaL_checknumber(L, 4);
+        set_clip(x, y, w, h);
+    }
     return 0;
 }
 
