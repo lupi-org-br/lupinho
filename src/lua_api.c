@@ -280,6 +280,8 @@ static int get_keyboard_key_for_button(int button) {
         case GAMEPAD_BUTTON_RIGHT_FACE_DOWN:  return KEY_Z;  // BTN_Z (alternative)
         case GAMEPAD_BUTTON_RIGHT_FACE_UP:    return KEY_X;  // BTN_Q
         case GAMEPAD_BUTTON_RIGHT_FACE_LEFT:  return KEY_A;  // BTN_E
+        case GAMEPAD_BUTTON_LEFT_TRIGGER_1:   return KEY_Q;  // BTN_F
+        case GAMEPAD_BUTTON_RIGHT_TRIGGER_1:  return KEY_W;  // BTN_G
         default: return -1;
     }
 }

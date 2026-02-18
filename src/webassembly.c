@@ -171,6 +171,12 @@ int main() {
     lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
     lua_setglobal(globalLuaState, "BTN_Z");
 
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_TRIGGER_1);
+    lua_setglobal(globalLuaState, "BTN_F");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_TRIGGER_1);
+    lua_setglobal(globalLuaState, "BTN_G");
+
     InitWindow(screenWidth, screenHeight, "Lupi Emulator");
 
     // Add game-example directory to Lua's package.path so require() can find modules there
