@@ -373,9 +373,12 @@ int lua_fillp(lua_State *L) {
 
 //----------------------------------------------------------------------------------
 // ui.map(map_data, cam_x, cam_y)
-// map_data: table with lupi_metadata {width,height,tile_size} and
-//           tileset keys {[tile_position]=tile_id, ...} (1-indexed, sparse)
-// cam_x/cam_y: screen-space offset where the map is drawn
+// map_data is a layer table, e.g. M.map.BG1:
+//   lupi_metadata = { width, height, tile_size }
+//   ["scene_a"]   = { [1]=tile_id, [2]=tile_id, ... }  (sparse, 1-indexed)
+// The tileset key (e.g. "scene_a") is looked up in Sprites.map to get the
+// sprite path and dimensions.
+// cam_x/cam_y: screen-space offset where the map is drawn.
 //----------------------------------------------------------------------------------
 int lua_map(lua_State *L) {
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -395,7 +398,7 @@ int lua_map(lua_State *L) {
     lua_getfield(L, 4, "tile_size");
     int tile_size  = (int)lua_tonumber(L, -1); lua_pop(L, 1);
 
-    lua_pop(L, 1); // pop lupi_metadata
+    lua_pop(L, 1); // pop lupi_metadata [4]
 
     if (map_width <= 0 || map_height <= 0 || tile_size <= 0) return 0;
 
@@ -406,10 +409,10 @@ int lua_map(lua_State *L) {
     lua_getfield(L, 4, "map");                  // [5]
     if (!lua_istable(L, -1)) { lua_pop(L, 2); return 0; }
 
-    // --- iterate over tileset keys in map_data ---
+    // --- iterate tileset keys in map_data ---
     lua_pushnil(L);                             // [6] first key
     while (lua_next(L, 1) != 0) {
-        // [6]=key  [7]=value (tile data table)
+        // [6]=key (tileset name)  [7]=value ({[pos]=tile_id})
 
         if (lua_type(L, 6) != LUA_TSTRING || !lua_istable(L, 7)) {
             lua_pop(L, 1); continue;
@@ -420,7 +423,7 @@ int lua_map(lua_State *L) {
             lua_pop(L, 1); continue;
         }
 
-        // get Sprites.map[tileset_name]
+        // resolve sprite via Sprites.map[tileset_name]
         lua_getfield(L, 5, tileset_name);       // [8]
         if (!lua_istable(L, -1)) {
             lua_pop(L, 2); continue;
@@ -441,7 +444,7 @@ int lua_map(lua_State *L) {
             lua_pop(L, 1); continue;
         }
 
-        // read the entire tileset file into memory once
+        // read entire tileset file into memory once
         FILE *f = fopen(path, "rb");
         if (!f) { lua_pop(L, 1); continue; }
 
@@ -457,7 +460,7 @@ int lua_map(lua_State *L) {
 
         int tile_pixels = tile_w * tile_h;
 
-        // draw each tile
+        // draw each tile position
         for (int map_idx = 1; map_idx <= map_width * map_height; map_idx++) {
             lua_rawgeti(L, 7, map_idx);         // [8] tile_id or nil
             if (lua_isnil(L, -1)) { lua_pop(L, 1); continue; }
@@ -465,8 +468,9 @@ int lua_map(lua_State *L) {
             int tile_id_flags = (int)lua_tonumber(L, -1);
             lua_pop(L, 1);
 
-            bool flipped = (tile_id_flags & 1024) != 0;
-            int tile_id  = tile_id_flags & ~1024;
+            bool flip_x = (tile_id_flags & 1024) != 0;
+            bool flip_y = (tile_id_flags & 2048) != 0;
+            int tile_id = tile_id_flags & ~(1024 | 2048);
 
             long offset = (long)tile_id * tile_pixels;
             if (offset < 0 || offset + tile_pixels > file_size) continue;
@@ -482,8 +486,9 @@ int lua_map(lua_State *L) {
                 for (int tx = 0; tx < tile_w; tx++) {
                     unsigned char idx = tile_data[ty * tile_w + tx];
                     if (idx == 0) continue;
-                    int px = flipped ? (sx + tile_w - 1 - tx) : (sx + tx);
-                    fb_set(px, sy + ty, idx);
+                    int px = flip_x ? (sx + tile_w - 1 - tx) : (sx + tx);
+                    int py = flip_y ? (sy + tile_h - 1 - ty) : (sy + ty);
+                    fb_set(px, py, idx);
                 }
             }
         }
