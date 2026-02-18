@@ -9,12 +9,12 @@
 #include "raylib.h"
 
 //----------------------------------------------------------------------------------
-// ui.draw_text(text:string, x:int, y:int)
+// ui.draw_text(text:string, x:number, y:number)
 //----------------------------------------------------------------------------------
 int lua_draw_text(lua_State *L) {
     char *text = luaL_checkstring(L, 1);
-    int x = luaL_optinteger(L, 2, 10);
-    int y = luaL_optinteger(L, 3, 10);
+    int x = (int)luaL_optnumber(L, 2, 10);
+    int y = (int)luaL_optnumber(L, 3, 10);
 
     add_text(text, x, y);
 
@@ -22,14 +22,14 @@ int lua_draw_text(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.draw_line(x1:int, y1:int, x2:int, y2:int, color:int)
+// ui.draw_line(x1:number, y1:number, x2:number, y2:number, color:number)
 //----------------------------------------------------------------------------------
 int lua_draw_line(lua_State *L) {
-    int x1 = luaL_checkinteger(L, 1);
-    int y1 = luaL_checkinteger(L, 2);
-    int x2 = luaL_checkinteger(L, 3);
-    int y2 = luaL_checkinteger(L, 4);
-    int color = luaL_checkinteger(L, 5);
+    int x1 = (int)luaL_checknumber(L, 1);
+    int y1 = (int)luaL_checknumber(L, 2);
+    int x2 = (int)luaL_checknumber(L, 3);
+    int y2 = (int)luaL_checknumber(L, 4);
+    int color = (int)luaL_checknumber(L, 5);
 
     add_line(x1, y1, x2, y2, get_palette_color(color), color);
 
@@ -37,15 +37,15 @@ int lua_draw_line(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.draw_rect(x:int, y:int, width:int, height:int, filled:bool, color:int)
+// ui.draw_rect(x:number, y:number, width:number, height:number, filled:bool, color:number)
 //----------------------------------------------------------------------------------
 int lua_draw_rect(lua_State *L) {
-    int x = luaL_checkinteger(L, 1);
-    int y = luaL_checkinteger(L, 2);
-    int width = luaL_checkinteger(L, 3);
-    int height = luaL_checkinteger(L, 4);
+    int x = (int)luaL_checknumber(L, 1);
+    int y = (int)luaL_checknumber(L, 2);
+    int width = (int)luaL_checknumber(L, 3);
+    int height = (int)luaL_checknumber(L, 4);
     bool filled = lua_toboolean(L, 5);
-    int color = luaL_checkinteger(L, 6);
+    int color = (int)luaL_checknumber(L, 6);
 
     add_rect(x, y, width, height, filled, color);
 
@@ -56,11 +56,11 @@ int lua_draw_rect(lua_State *L) {
 // ui.rect(x1, y1, x2, y2, color)
 //----------------------------------------------------------------------------------
 int lua_rect(lua_State *L) {
-    int x1 = luaL_checkinteger(L, 1);
-    int y1 = luaL_checkinteger(L, 2);
-    int x2 = luaL_checkinteger(L, 3);
-    int y2 = luaL_checkinteger(L, 4);
-    int color = luaL_checkinteger(L, 5);
+    int x1 = (int)luaL_checknumber(L, 1);
+    int y1 = (int)luaL_checknumber(L, 2);
+    int x2 = (int)luaL_checknumber(L, 3);
+    int y2 = (int)luaL_checknumber(L, 4);
+    int color = (int)luaL_checknumber(L, 5);
 
     add_rect(x1, y1, (x2 - x1), (y2 - y1), false, color);
 
@@ -71,11 +71,11 @@ int lua_rect(lua_State *L) {
 // ui.rectfill(x1, y1, x2, y2, color)
 //----------------------------------------------------------------------------------
 int lua_rectfill(lua_State *L) {
-    int x1 = luaL_checkinteger(L, 1);
-    int y1 = luaL_checkinteger(L, 2);
-    int x2 = luaL_checkinteger(L, 3);
-    int y2 = luaL_checkinteger(L, 4);
-    int color = luaL_checkinteger(L, 5);
+    int x1 = (int)luaL_checknumber(L, 1);
+    int y1 = (int)luaL_checknumber(L, 2);
+    int x2 = (int)luaL_checknumber(L, 3);
+    int y2 = (int)luaL_checknumber(L, 4);
+    int color = (int)luaL_checknumber(L, 5);
 
     add_rect(x1, y1, (x2 - x1), (y2 - y1), true, color);
 
@@ -83,16 +83,16 @@ int lua_rectfill(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.draw_circle(center_x:int, center_y:int, radius:int, filled:bool, color:int, border:bool, border_color:int)
+// ui.draw_circle(center_x:number, center_y:number, radius:number, filled:bool, color:number, border:bool, border_color:number)
 //----------------------------------------------------------------------------------
 int lua_draw_circle(lua_State *L) {
-    int center_x = luaL_checkinteger(L, 1);
-    int center_y = luaL_checkinteger(L, 2);
-    int radius = luaL_checkinteger(L, 3);
+    int center_x = (int)luaL_checknumber(L, 1);
+    int center_y = (int)luaL_checknumber(L, 2);
+    int radius = (int)luaL_checknumber(L, 3);
     bool filled = lua_toboolean(L, 4);
-    int color = luaL_checkinteger(L, 5);
+    int color = (int)luaL_checknumber(L, 5);
     bool border = lua_toboolean(L, 6);
-    int border_color = luaL_checkinteger(L, 7);
+    int border_color = (int)luaL_checknumber(L, 7);
 
     add_circle(center_x, center_y, radius, filled, color, border, border_color);
 
@@ -103,10 +103,10 @@ int lua_draw_circle(lua_State *L) {
 // ui.circfill(x, y, radius, color)
 //----------------------------------------------------------------------------------
 int lua_circfill(lua_State *L) {
-    int center_x = luaL_checkinteger(L, 1);
-    int center_y = luaL_checkinteger(L, 2);
-    int radius = luaL_checkinteger(L, 3);
-    int color = luaL_checkinteger(L, 4);
+    int center_x = (int)luaL_checknumber(L, 1);
+    int center_y = (int)luaL_checknumber(L, 2);
+    int radius = (int)luaL_checknumber(L, 3);
+    int color = (int)luaL_checknumber(L, 4);
 
     add_circle(center_x, center_y, radius, true, color, true, color);
 
@@ -117,13 +117,13 @@ int lua_circfill(lua_State *L) {
 // ui.trisfill(p1_x:int, p1_y:int, p2_x:int, p2_y:int, p3_x:int, p3_y:int, color:int)
 //----------------------------------------------------------------------------------
 int lua_trisfill(lua_State *L) {
-    int p1_x = luaL_checkinteger(L, 1);
-    int p1_y = luaL_checkinteger(L, 2);
-    int p2_x = luaL_checkinteger(L, 3);
-    int p2_y = luaL_checkinteger(L, 4);
-    int p3_x = luaL_checkinteger(L, 5);
-    int p3_y = luaL_checkinteger(L, 6);
-    int color = luaL_checkinteger(L, 7);
+    int p1_x = (int)luaL_checknumber(L, 1);
+    int p1_y = (int)luaL_checknumber(L, 2);
+    int p2_x = (int)luaL_checknumber(L, 3);
+    int p2_y = (int)luaL_checknumber(L, 4);
+    int p3_x = (int)luaL_checknumber(L, 5);
+    int p3_y = (int)luaL_checknumber(L, 6);
+    int color = (int)luaL_checknumber(L, 7);
 
     add_triangle(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, color);
 
@@ -131,11 +131,11 @@ int lua_trisfill(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.palset(position:int, color:int)
+// ui.palset(position:number, color:number)
 //----------------------------------------------------------------------------------
 int lua_palset(lua_State *L) {
-    int position = luaL_checkinteger(L, 1);
-    int color = luaL_checkinteger(L, 2);
+    int position = (int)luaL_checknumber(L, 1);
+    int color = (int)luaL_checknumber(L, 2);
 
     palset(position, color);
 
@@ -143,7 +143,7 @@ int lua_palset(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.tile(spritesheet:table, tile_index:int, x:int, y:int)
+// ui.tile(spritesheet:table, tile_index:number, x:number, y:number)
 // tile_index can have bit 10 (1024) set to flip horizontally
 //----------------------------------------------------------------------------------
 int lua_tile(lua_State *L) {
@@ -154,16 +154,16 @@ int lua_tile(lua_State *L) {
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "width");
-    int width = luaL_checkinteger(L, -1);
+    int width = (int)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "height");
-    int height = luaL_checkinteger(L, -1);
+    int height = (int)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
-    int tile_index_with_flags = luaL_checkinteger(L, 2);
-    int x = luaL_checkinteger(L, 3);
-    int y = luaL_checkinteger(L, 4);
+    int tile_index_with_flags = (int)luaL_checknumber(L, 2);
+    int x = (int)luaL_checknumber(L, 3);
+    int y = (int)luaL_checknumber(L, 4);
 
     bool flipped = (tile_index_with_flags & 1024) != 0;
     int tile_index = tile_index_with_flags & ~1024;
@@ -206,7 +206,7 @@ int lua_tile(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.spr(spritesheet:table, x:int, y:int, flipped:bool = false)
+// ui.spr(spritesheet:table, x:number, y:number, flipped:bool = false)
 //----------------------------------------------------------------------------------
 int lua_spr(lua_State *L) {
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -216,15 +216,15 @@ int lua_spr(lua_State *L) {
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "width");
-    int width = luaL_checkinteger(L, -1);
+    int width = (int)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "height");
-    int height = luaL_checkinteger(L, -1);
+    int height = (int)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
-    int x = luaL_checkinteger(L, 2);
-    int y = luaL_checkinteger(L, 3);
+    int x = (int)luaL_checknumber(L, 2);
+    int y = (int)luaL_checknumber(L, 3);
 
     bool flipped = false;
     if (lua_gettop(L) > 3) {
@@ -285,12 +285,12 @@ static int get_keyboard_key_for_button(int button) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.btn(button:int, pad:int) -> bool
+// ui.btn(button:number, pad:number) -> bool
 // Checks both gamepad and keyboard input
 //----------------------------------------------------------------------------------
 int lua_btn(lua_State *L) {
-    int button = luaL_checkinteger(L, 1);
-    int pad = luaL_optinteger(L, 2, 0);
+    int button = (int)luaL_checknumber(L, 1);
+    int pad = (int)luaL_optnumber(L, 2, 0);
 
     bool is_down = IsGamepadButtonDown(pad, button);
 
@@ -307,12 +307,12 @@ int lua_btn(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// ui.btnp(button:int, pad:int) -> bool
+// ui.btnp(button:number, pad:number) -> bool
 // Checks both gamepad and keyboard input (pressed this frame)
 //----------------------------------------------------------------------------------
 int lua_btnp(lua_State *L) {
-    int button = luaL_checkinteger(L, 1);
-    int pad = luaL_optinteger(L, 2, 0);
+    int button = (int)luaL_checknumber(L, 1);
+    int pad = (int)luaL_optnumber(L, 2, 0);
 
     bool is_pressed = IsGamepadButtonPressed(pad, button);
 
@@ -332,7 +332,7 @@ int lua_btnp(lua_State *L) {
 // ui.cls(color:int)
 //----------------------------------------------------------------------------------
 int lua_cls(lua_State *L) {
-    int color = luaL_checkinteger(L, 1);
+    int color = (int)luaL_checknumber(L, 1);
     add_clear(color);
 
     return 0;
@@ -359,7 +359,7 @@ int lua_fillp(lua_State *L) {
     }
 
     for (int i = 0; i < nargs && i < 8; i++) {
-        fill_pattern[i] = (uint8_t)luaL_checkinteger(L, i + 1);
+        fill_pattern[i] = (uint8_t)(int)luaL_checknumber(L, i + 1);
     }
 
     // Fill remaining bytes with 0 if fewer than 8 arguments
@@ -377,8 +377,8 @@ int lua_fillp(lua_State *L) {
 // ui.camera(x, y)
 //----------------------------------------------------------------------------------
 int lua_camera(lua_State *L) {
-    int x = luaL_checkinteger(L, 1);
-    int y = luaL_checkinteger(L, 2);
+    int x = (int)luaL_checknumber(L, 1);
+    int y = (int)luaL_checknumber(L, 2);
 
     return 0;
 }
@@ -387,10 +387,10 @@ int lua_camera(lua_State *L) {
 // ui.clip(x, y, width, height)
 //----------------------------------------------------------------------------------
 int lua_clip(lua_State *L) {
-    int x = luaL_checkinteger(L, 1);
-    int y = luaL_checkinteger(L, 2);
-    int width = luaL_checkinteger(L, 3);
-    int height = luaL_checkinteger(L, 4);
+    int x = (int)luaL_checknumber(L, 1);
+    int y = (int)luaL_checknumber(L, 2);
+    int width = (int)luaL_checknumber(L, 3);
+    int height = (int)luaL_checknumber(L, 4);
 
     return 0;
 }
@@ -399,7 +399,7 @@ int lua_clip(lua_State *L) {
 // ui.preload_spritesheet(spritesheet)
 //----------------------------------------------------------------------------------
 int lua_preload_spritesheet(lua_State *L) {
-    int spritesheet = luaL_checkinteger(L, 1);
+    int spritesheet = (int)luaL_checknumber(L, 1);
 
     return 0;
 }
@@ -408,10 +408,10 @@ int lua_preload_spritesheet(lua_State *L) {
 // ui.draw_sprite(x, y, sprite_index, size)
 //----------------------------------------------------------------------------------
 int lua_draw_sprite(lua_State *L) {
-    int x = luaL_checkinteger(L, 1);
-    int y = luaL_checkinteger(L, 2);
-    int sprite_index = luaL_checkinteger(L, 3);
-    int size = luaL_checkinteger(L, 4);
+    int x = (int)luaL_checknumber(L, 1);
+    int y = (int)luaL_checknumber(L, 2);
+    int sprite_index = (int)luaL_checknumber(L, 3);
+    int size = (int)luaL_checknumber(L, 4);
 
     return 0;
 }
@@ -420,10 +420,12 @@ int lua_draw_sprite(lua_State *L) {
 // ui.print(text, x, y, color)
 //----------------------------------------------------------------------------------
 int lua_print(lua_State *L) {
-    char *text = luaL_checkstring(L, 1);
-    int x = luaL_checkinteger(L, 2);
-    int y = luaL_checkinteger(L, 3);
-    int color = luaL_checkinteger(L, 4);
+    const char *text = luaL_checkstring(L, 1);
+    int x = (int)luaL_checknumber(L, 2);
+    int y = (int)luaL_checknumber(L, 3);
+    int color = (int)luaL_checknumber(L, 4);
+
+    draw_print(text, x, y, color);
 
     return 0;
 }
@@ -432,8 +434,8 @@ int lua_print(lua_State *L) {
 // ui.set_pallet(start_index, count, palette_table)
 //----------------------------------------------------------------------------------
 int lua_set_pallet(lua_State *L) {
-    int start_index = luaL_checkinteger(L, 1);
-    int count = luaL_checkinteger(L, 2);
+    int start_index = (int)luaL_checknumber(L, 1);
+    int count = (int)luaL_checknumber(L, 2);
     luaL_checktype(L, 3, LUA_TTABLE);  // Check that argument 3 is a table
 
     return 0;

@@ -64,6 +64,11 @@ void clear_frame_buffer();
 void draw_frame_buffer();
 
 /*
+Print (bitmap font) Functions
+*/
+void draw_print(const char *text, int x, int y, int color_index);
+
+/*
 Lua Functions
 */
 int lua_draw_text(lua_State *L);

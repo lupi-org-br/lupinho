@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "drawlist.h"
+#include "font.h"
 
 /*
 Global vars
@@ -604,5 +605,34 @@ void clear_frame_buffer() {
     }
 
     UnloadTexture(scene);
+}
+
+/*
+* Print (bitmap font) Functions
+*/
+void draw_print(const char *text, int x, int y, int color_index) {
+    int cursor_x = x;
+
+    for (int i = 0; text[i] != '\0'; i++) {
+        unsigned char c = (unsigned char)text[i];
+
+        if (c < 32 || c > 126) continue;
+
+        const uint8_t *glyph = font_data[c - 32];
+
+        for (int col = 0; col < FONT_CHAR_WIDTH; col++) {
+            for (int row = 0; row < FONT_CHAR_HEIGHT; row++) {
+                if (glyph[col] & (1 << row)) {
+                    int px = cursor_x + col;
+                    int py = y + row;
+                    if (px >= 0 && px < screenWidth && py >= 0 && py < screenHeight) {
+                        frame_buffer[py][px] = (char)color_index;
+                    }
+                }
+            }
+        }
+
+        cursor_x += FONT_CHAR_ADVANCE;
+    }
 }
 
