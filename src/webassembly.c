@@ -1,4 +1,4 @@
-#include "drawlist.h"
+#include "ui.h"
 
 #include <stdlib.h>
 #include <lua.h>
@@ -11,14 +11,11 @@ Constants
 **/
 const int screenWidth = 480;
 const int screenHeight = 270;
-const int initial_sprites_in_memory_count = 10;
 
 /**
 Global objects
 **/
-Drawlist drawlist;
 lua_State *globalLuaState = NULL;
-SpritesInMemory sprites_in_memory;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -47,13 +44,6 @@ void UpdateDrawFrame() {
 
     ClearBackground(RAYWHITE);
 
-    NodeDrawable *node = drawlist.root;
-
-    for (int i = 0; i < drawlist.count; i++) {
-        draw(node);
-        node = node->next;
-    }
-
     draw_frame_buffer();
 
     #ifndef PRODUCTION
@@ -62,22 +52,14 @@ void UpdateDrawFrame() {
 
     EndDrawing();
 
-    clear_drawlist();
     clear_frame_buffer();
 }
 
 int main() {
-    sprites_in_memory.count = 0;
-    sprites_in_memory.max_count = initial_sprites_in_memory_count;
-    sprites_in_memory.sprites = (SpriteInMemory **) calloc(sprites_in_memory.max_count, sizeof(SpriteInMemory *));
-
     globalLuaState = luaL_newstate();
     luaL_openlibs(globalLuaState);
 
     lua_newtable(globalLuaState);
-
-    lua_pushcfunction(globalLuaState, lua_draw_text);
-    lua_setfield(globalLuaState, -2, "draw_text");
 
     lua_pushcfunction(globalLuaState, lua_draw_line);
     lua_setfield(globalLuaState, -2, "draw_line");

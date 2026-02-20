@@ -1,20 +1,13 @@
-#ifndef DRAWLIST_H
-#define DRAWLIST_H
+#ifndef UI_H
+#define UI_H
 
 #include <lua.h>
 
 #include "types.h"
 
 /*
-Drawlist Functions
+Draw Functions
 */
-void draw(NodeDrawable *node);
-void clear_drawlist();
-void add_drawable(void *drawable, char type);
-
-void add_text(char *text_s, int x, int y);
-void draw_text(TextItem *text);
-
 void add_line(int x1, int y1, int x2, int y2, Color color, int color_index);
 void draw_line(LineItem *line);
 
@@ -30,11 +23,6 @@ void draw_clear(ClearItem *clear);
 void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, int color_index);
 void draw_triangle(TriangleItem *triangle);
 
-void add_tile(SpriteInMemory *sprite_in_memory, int tile_index, int x, int y, bool flipped);
-void draw_tile(TileItem *tile);
-void add_sprite(SpriteInMemory *sprite_in_memory, int x, int y, bool flipped);
-void draw_sprite(SpriteItem *sprite);
-
 /*
 Palette Functions
 */
@@ -49,12 +37,9 @@ Fill Pattern Functions
 extern uint8_t fill_pattern[8];
 
 /*
-Sprites In Memory Functions
+Sprites Lua Global
 */
-extern SpritesInMemory sprites_in_memory;
 void inject_sprites_global(lua_State *L, const char *manifest_path, const char *game_dir);
-void add_sprite_in_memory(char *name, char *data, int width, int height, int ntiles);
-SpriteInMemory* get_sprite_in_memory(char *name);
 
 /*
 Camera Functions
@@ -86,7 +71,6 @@ void draw_print(const char *text, int x, int y, int color_index);
 /*
 Lua Functions
 */
-int lua_draw_text(lua_State *L);
 int lua_draw_line(lua_State *L);
 int lua_draw_rect(lua_State *L);
 int lua_rect(lua_State *L);
@@ -97,7 +81,6 @@ int lua_trisfill(lua_State *L);
 int lua_palset(lua_State *L);
 int lua_tile(lua_State *L);
 int lua_spr(lua_State *L);
-int lua_require_sprites(lua_State *L);
 int lua_btn(lua_State *L);
 int lua_btnp(lua_State *L);
 int lua_fillp(lua_State *L);
@@ -112,4 +95,4 @@ int lua_preload_spritesheet(lua_State *L);
 int lua_draw_sprite(lua_State *L);
 int lua_print(lua_State *L);
 int lua_set_pallet(lua_State *L);
-#endif
+#endif // UI_H

@@ -5,16 +5,6 @@
 #include <string.h>
 #include <stdint.h>
 
-// Text
-#define MAX_TEXT_LENGTH 100
-typedef struct {
-    char *text;
-    int x;
-    int y;
-    int fontSize;
-    Color color;
-} TextItem;
-
 // Line
 typedef struct {
     int x1;
@@ -58,57 +48,9 @@ typedef struct {
     int color_index;
 } TriangleItem;
 
-// Sprite In Memory
-#define MAX_SPRITE_NAME_LENGTH 256
-typedef struct {
-    char name[MAX_SPRITE_NAME_LENGTH];
-    Texture2D texture;
-    int tile_width;
-    int tile_height;
-    int ntiles;
-} SpriteInMemory;
-
-// Sprites In Memory
-typedef struct {
-    SpriteInMemory **sprites;
-    int count;
-    int max_count;
-} SpritesInMemory;
-
-// Tile Drawable
-typedef struct {
-    SpriteInMemory *sprite_in_memory;
-    int tile_index;
-    int x;
-    int y;
-    bool flipped;
-} TileItem;
-
-// Sprite Drawable
-typedef struct {
-    SpriteInMemory *sprite_in_memory;
-    int x;
-    int y;
-    bool flipped;
-} SpriteItem;
-
 // Clear Drawable
 typedef struct {
     int color_index;
 } ClearItem;
-
-// List Objects
-typedef struct NodeDrawable NodeDrawable;
-
-struct NodeDrawable{
-    char type;
-    void *drawable;
-    NodeDrawable *next;
-};
-
-typedef struct {
-    int count;
-    NodeDrawable *root;
-} Drawlist;
 
 #endif // TYPES_H

@@ -5,21 +5,8 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
-#include "drawlist.h"
+#include "ui.h"
 #include "raylib.h"
-
-//----------------------------------------------------------------------------------
-// ui.draw_text(text:string, x:number, y:number)
-//----------------------------------------------------------------------------------
-int lua_draw_text(lua_State *L) {
-    char *text = luaL_checkstring(L, 1);
-    int x = (int)luaL_optnumber(L, 2, 10);
-    int y = (int)luaL_optnumber(L, 3, 10);
-
-    add_text(text, x, y);
-
-    return 0;
-}
 
 //----------------------------------------------------------------------------------
 // ui.draw_line(x1:number, y1:number, x2:number, y2:number, color:number)
