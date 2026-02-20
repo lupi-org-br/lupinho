@@ -42,6 +42,14 @@ Sprites Lua Global
 void inject_sprites_global(lua_State *L, const char *manifest_path, const char *game_dir);
 
 /*
+Tile / Sprite / Map Draw Functions
+*/
+void draw_tile(const char *path, int width, int height, int tile_index, int x, int y, bool flipped);
+void draw_spr(const char *path, int width, int height, int x, int y, bool flipped);
+void set_fillp(uint8_t *bytes, int n);
+void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x, int cam_y);
+
+/*
 Camera Functions
 */
 extern int camera_x;

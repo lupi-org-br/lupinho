@@ -149,44 +149,13 @@ int lua_tile(lua_State *L) {
     lua_pop(L, 1);
 
     int tile_index_with_flags = (int)luaL_checknumber(L, 2);
-    int x = (int)luaL_checknumber(L, 3) - camera_x;
-    int y = (int)luaL_checknumber(L, 4) - camera_y;
+    int x = (int)luaL_checknumber(L, 3);
+    int y = (int)luaL_checknumber(L, 4);
 
     bool flipped = (tile_index_with_flags & 1024) != 0;
     int tile_index = tile_index_with_flags & ~1024;
 
-    FILE *f = fopen(path, "rb");
-    if (!f) {
-        printf("Warning: Could not open tile file %s\n", path);
-        return 0;
-    }
-
-    int tile_size = width * height;
-    long data_offset = (long)tile_index * tile_size;
-    fseek(f, data_offset, SEEK_SET);
-
-    unsigned char *data = (unsigned char *) malloc(tile_size);
-    if (!data) {
-        fclose(f);
-        return 0;
-    }
-
-    fread(data, 1, tile_size, f);
-    fclose(f);
-
-    for (int row = 0; row < height; row++) {
-        for (int col = 0; col < width; col++) {
-            unsigned char idx = data[row * width + col];
-            if (idx == 0) continue;
-
-            int px = flipped ? (x + width - 1 - col) : (x + col);
-            int py = y + row;
-
-            fb_set(px, py, idx);
-        }
-    }
-
-    free(data);
+    draw_tile(path, width, height, tile_index, x, y, flipped);
     return 0;
 }
 
@@ -208,43 +177,15 @@ int lua_spr(lua_State *L) {
     int height = (int)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
-    int x = (int)luaL_checknumber(L, 2) - camera_x;
-    int y = (int)luaL_checknumber(L, 3) - camera_y;
+    int x = (int)luaL_checknumber(L, 2);
+    int y = (int)luaL_checknumber(L, 3);
 
     bool flipped = false;
     if (lua_gettop(L) > 3) {
         flipped = lua_toboolean(L, 4);
     }
 
-    FILE *f = fopen(path, "rb");
-    if (!f) {
-        printf("Warning: Could not open sprite file %s\n", path);
-        return 0;
-    }
-
-    int data_size = width * height;
-    unsigned char *data = (unsigned char *) malloc(data_size);
-    if (!data) {
-        fclose(f);
-        return 0;
-    }
-
-    fread(data, 1, data_size, f);
-    fclose(f);
-
-    for (int row = 0; row < height; row++) {
-        for (int col = 0; col < width; col++) {
-            unsigned char idx = data[row * width + col];
-            if (idx == 0) continue;
-
-            int px = flipped ? (x + width - 1 - col) : (x + col);
-            int py = y + row;
-
-            fb_set(px, py, idx);
-        }
-    }
-
-    free(data);
+    draw_spr(path, width, height, x, y, flipped);
     return 0;
 }
 
@@ -338,20 +279,12 @@ int lua_log(lua_State *L) {
 int lua_fillp(lua_State *L) {
     int nargs = lua_gettop(L);
 
-    if (nargs == 0) {
-        memset(fill_pattern, 0, sizeof(fill_pattern));
-        return 0;
-    }
-
+    uint8_t bytes[8] = {0};
     for (int i = 0; i < nargs && i < 8; i++) {
-        fill_pattern[i] = (uint8_t)(int)luaL_checknumber(L, i + 1);
+        bytes[i] = (uint8_t)(int)luaL_checknumber(L, i + 1);
     }
 
-    // Fill remaining bytes with 0 if fewer than 8 arguments
-    for (int i = nargs; i < 8; i++) {
-        fill_pattern[i] = 0;
-    }
-
+    set_fillp(bytes, nargs);
     return 0;
 }
 
@@ -396,6 +329,8 @@ int lua_map(lua_State *L) {
     lua_getfield(L, 4, "map");                  // [5]
     if (!lua_istable(L, -1)) { lua_pop(L, 2); return 0; }
 
+    int tile_count = map_width * map_height;
+
     // --- iterate tileset keys in map_data ---
     lua_pushnil(L);                             // [6] first key
     while (lua_next(L, 1) != 0) {
@@ -431,56 +366,27 @@ int lua_map(lua_State *L) {
             lua_pop(L, 1); continue;
         }
 
-        // read entire tileset file into memory once
-        FILE *f = fopen(path, "rb");
-        if (!f) { lua_pop(L, 1); continue; }
+        // build tile_ids array from the Lua layer table
+        int *tile_ids = (int *)malloc(tile_count * sizeof(int));
+        if (!tile_ids) { lua_pop(L, 1); continue; }
 
-        fseek(f, 0, SEEK_END);
-        long file_size = ftell(f);
-        fseek(f, 0, SEEK_SET);
-
-        unsigned char *file_buf = (unsigned char *)malloc(file_size);
-        if (!file_buf) { fclose(f); lua_pop(L, 1); continue; }
-
-        fread(file_buf, 1, file_size, f);
-        fclose(f);
-
-        int tile_pixels = tile_w * tile_h;
-
-        // draw each tile position
-        for (int map_idx = 1; map_idx <= map_width * map_height; map_idx++) {
-            lua_rawgeti(L, 7, map_idx);         // [8] tile_id or nil
-            if (lua_isnil(L, -1)) { lua_pop(L, 1); continue; }
-
-            int tile_id_flags = (int)lua_tonumber(L, -1);
+        for (int i = 0; i < tile_count; i++) {
+            lua_rawgeti(L, 7, i + 1);
+            tile_ids[i] = lua_isnil(L, -1) ? -1 : (int)lua_tonumber(L, -1);
             lua_pop(L, 1);
-
-            bool flip_x = (tile_id_flags & 1024) != 0;
-            bool flip_y = (tile_id_flags & 2048) != 0;
-            int tile_id = tile_id_flags & ~(1024 | 2048);
-
-            long offset = (long)tile_id * tile_pixels;
-            if (offset < 0 || offset + tile_pixels > file_size) continue;
-
-            int col = (map_idx - 1) % map_width;
-            int row = (map_idx - 1) / map_width;
-            int sx  = col * tile_size + cam_x;
-            int sy  = row * tile_size + cam_y;
-
-            unsigned char *tile_data = file_buf + offset;
-
-            for (int ty = 0; ty < tile_h; ty++) {
-                for (int tx = 0; tx < tile_w; tx++) {
-                    unsigned char idx = tile_data[ty * tile_w + tx];
-                    if (idx == 0) continue;
-                    int px = flip_x ? (sx + tile_w - 1 - tx) : (sx + tx);
-                    int py = flip_y ? (sy + tile_h - 1 - ty) : (sy + ty);
-                    fb_set(px, py, idx);
-                }
-            }
         }
 
-        free(file_buf);
+        MapLayerData data = {
+            .path     = path,
+            .tile_w   = tile_w,
+            .tile_h   = tile_h,
+            .tile_ids = tile_ids,
+            .count    = tile_count,
+        };
+
+        draw_map_layer(&data, map_width, tile_size, cam_x, cam_y);
+        free(tile_ids);
+
         lua_pop(L, 1); // pop value [7], keep key for next iteration
     }
 

@@ -416,4 +416,135 @@ void clear_frame_buffer() {
     UnloadTexture(scene);
 }
 
+/**
+Tile Functions
+**/
+void draw_tile(const char *path, int width, int height, int tile_index, int x, int y, bool flipped) {
+    x -= camera_x;
+    y -= camera_y;
+
+    int tile_size = width * height;
+    long data_offset = (long)tile_index * tile_size;
+
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        printf("Warning: Could not open tile file %s\n", path);
+        return;
+    }
+
+    fseek(f, data_offset, SEEK_SET);
+
+    unsigned char *data = (unsigned char *) malloc(tile_size);
+    if (!data) { fclose(f); return; }
+
+    fread(data, 1, tile_size, f);
+    fclose(f);
+
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            unsigned char idx = data[row * width + col];
+            if (idx == 0) continue;
+            int px = flipped ? (x + width - 1 - col) : (x + col);
+            int py = y + row;
+            fb_set(px, py, idx);
+        }
+    }
+
+    free(data);
+}
+
+/**
+Sprite Functions
+**/
+void draw_spr(const char *path, int width, int height, int x, int y, bool flipped) {
+    x -= camera_x;
+    y -= camera_y;
+
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        printf("Warning: Could not open sprite file %s\n", path);
+        return;
+    }
+
+    int data_size = width * height;
+    unsigned char *data = (unsigned char *) malloc(data_size);
+    if (!data) { fclose(f); return; }
+
+    fread(data, 1, data_size, f);
+    fclose(f);
+
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            unsigned char idx = data[row * width + col];
+            if (idx == 0) continue;
+            int px = flipped ? (x + width - 1 - col) : (x + col);
+            int py = y + row;
+            fb_set(px, py, idx);
+        }
+    }
+
+    free(data);
+}
+
+/**
+Fill Pattern Functions
+**/
+void set_fillp(uint8_t *bytes, int n) {
+    for (int i = 0; i < n && i < 8; i++) fill_pattern[i] = bytes[i];
+    for (int i = n; i < 8; i++)          fill_pattern[i] = 0;
+}
+
+/**
+Map Functions
+**/
+void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x, int cam_y) {
+    FILE *f = fopen(data->path, "rb");
+    if (!f) {
+        printf("Warning: Could not open tileset file %s\n", data->path);
+        return;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    unsigned char *file_buf = (unsigned char *)malloc(file_size);
+    if (!file_buf) { fclose(f); return; }
+
+    fread(file_buf, 1, file_size, f);
+    fclose(f);
+
+    int tile_pixels = data->tile_w * data->tile_h;
+
+    for (int map_idx = 0; map_idx < data->count; map_idx++) {
+        if (data->tile_ids[map_idx] < 0) continue;
+
+        int tile_id_flags = data->tile_ids[map_idx];
+        bool flip_x = (tile_id_flags & 1024) != 0;
+        bool flip_y = (tile_id_flags & 2048) != 0;
+        int tile_id = tile_id_flags & ~(1024 | 2048);
+
+        long offset = (long)tile_id * tile_pixels;
+        if (offset < 0 || offset + tile_pixels > file_size) continue;
+
+        int col = map_idx % map_width;
+        int row = map_idx / map_width;
+        int sx  = col * tile_size + cam_x;
+        int sy  = row * tile_size + cam_y;
+
+        unsigned char *tile_data = file_buf + offset;
+        for (int ty = 0; ty < data->tile_h; ty++) {
+            for (int tx = 0; tx < data->tile_w; tx++) {
+                unsigned char idx = tile_data[ty * data->tile_w + tx];
+                if (idx == 0) continue;
+                int px = flip_x ? (sx + data->tile_w - 1 - tx) : (sx + tx);
+                int py = flip_y ? (sy + data->tile_h - 1 - ty) : (sy + ty);
+                fb_set(px, py, idx);
+            }
+        }
+    }
+
+    free(file_buf);
+}
+
 

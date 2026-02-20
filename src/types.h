@@ -53,4 +53,13 @@ typedef struct {
     int color_index;
 } ClearItem;
 
+// Map Layer Data
+typedef struct {
+    const char *path;
+    int tile_w;
+    int tile_h;
+    int *tile_ids;  // -1 = empty, otherwise tile_id_flags
+    int count;      // map_width * map_height
+} MapLayerData;
+
 #endif // TYPES_H
