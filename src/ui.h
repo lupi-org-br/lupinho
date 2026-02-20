@@ -5,61 +5,61 @@
 
 #define SCREEN_WIDTH  480
 #define SCREEN_HEIGHT 270
-#define PALETTE_SIZE 256
+#define PALETTE_SIZE  256
 
-/*
-Draw Functions
-*/
+//----------------------------------------------------------------------------------
+// Draw Functions
+//----------------------------------------------------------------------------------
 void draw_line(LineItem *line);
 void draw_rect(RectItem *rect);
 void draw_circle(CircleItem *circle);
 void draw_clear(ClearItem *clear);
 void draw_triangle(TriangleItem *triangle);
 
-/*
-Palette Functions
-*/
+//----------------------------------------------------------------------------------
+// Palette Functions
+//----------------------------------------------------------------------------------
 void palset(int position, int bgr555);
 Color get_palette_color(int index);
 
-/*
-Fill Pattern Functions
-*/
+//----------------------------------------------------------------------------------
+// Fill Pattern Functions
+//----------------------------------------------------------------------------------
 extern uint8_t fill_pattern[8];
 
-/*
-Tile / Sprite / Map Draw Functions
-*/
+//----------------------------------------------------------------------------------
+// Tile / Sprite / Map Draw Functions
+//----------------------------------------------------------------------------------
 void draw_tile(const char *path, int width, int height, int tile_index, int x, int y, bool flipped);
 void draw_spr(const char *path, int width, int height, int x, int y, bool flipped);
 void set_fillp(uint8_t *bytes, int n);
 void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x, int cam_y);
 
-/*
-Camera Functions
-*/
+//----------------------------------------------------------------------------------
+// Camera Functions
+//----------------------------------------------------------------------------------
 extern int camera_x;
 extern int camera_y;
 void set_camera(int x, int y);
 void reset_camera(void);
 
-/*
-Clip Functions
-*/
+//----------------------------------------------------------------------------------
+// Clip Functions
+//----------------------------------------------------------------------------------
 void set_clip(int x, int y, int w, int h);
 void reset_clip(void);
 
-/*
-Frame Buffer Functions
-*/
+//----------------------------------------------------------------------------------
+// Frame Buffer Functions
+//----------------------------------------------------------------------------------
 extern char frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 void fb_set(int x, int y, int color);
 void clear_frame_buffer();
 void draw_frame_buffer();
 
-/*
-Print (bitmap font) Functions
-*/
+//----------------------------------------------------------------------------------
+// Print (bitmap font) Functions
+//----------------------------------------------------------------------------------
 void draw_print(const char *text, int x, int y, int color_index);
 
 #endif // UI_H
