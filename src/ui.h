@@ -1,8 +1,6 @@
 #ifndef UI_H
 #define UI_H
 
-#include <lua.h>
-
 #include "types.h"
 
 /*
@@ -35,11 +33,6 @@ Color get_palette_color(int index);
 Fill Pattern Functions
 */
 extern uint8_t fill_pattern[8];
-
-/*
-Sprites Lua Global
-*/
-void inject_sprites_global(lua_State *L, const char *manifest_path, const char *game_dir);
 
 /*
 Tile / Sprite / Map Draw Functions
@@ -76,31 +69,4 @@ Print (bitmap font) Functions
 */
 void draw_print(const char *text, int x, int y, int color_index);
 
-/*
-Lua Functions
-*/
-int lua_draw_line(lua_State *L);
-int lua_draw_rect(lua_State *L);
-int lua_rect(lua_State *L);
-int lua_rectfill(lua_State *L);
-int lua_draw_circle(lua_State *L);
-int lua_circfill(lua_State *L);
-int lua_trisfill(lua_State *L);
-int lua_palset(lua_State *L);
-int lua_tile(lua_State *L);
-int lua_spr(lua_State *L);
-int lua_btn(lua_State *L);
-int lua_btnp(lua_State *L);
-int lua_fillp(lua_State *L);
-int lua_log(lua_State *L);
-int lua_cls(lua_State *L);
-int lua_map(lua_State *L);
-
-// TODO
-int lua_camera(lua_State *L);
-int lua_clip(lua_State *L);
-int lua_preload_spritesheet(lua_State *L);
-int lua_draw_sprite(lua_State *L);
-int lua_print(lua_State *L);
-int lua_set_pallet(lua_State *L);
 #endif // UI_H

@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
 
+#include "lua_api.h"
 #include "ui.h"
 #include "raylib.h"
+
+lua_State *globalLuaState = NULL;
+
+static char current_game_dir[512] = "";
 
 //----------------------------------------------------------------------------------
 // ui.draw_line(x1:number, y1:number, x2:number, y2:number, color:number)
@@ -562,4 +564,177 @@ void inject_sprites_global(lua_State *L, const char *manifest_path, const char *
 
     fclose(f);
     lua_setglobal(L, "Sprites");
+}
+
+//----------------------------------------------------------------------------------
+// Sprites preload loader — called when Lua does require("sprites")
+//----------------------------------------------------------------------------------
+static int lua_sprites_loader(lua_State *L) {
+    char manifest_path[512];
+    snprintf(manifest_path, sizeof(manifest_path), "%s/lupi_manifest.txt", current_game_dir);
+    inject_sprites_global(L, manifest_path, current_game_dir);
+    lua_getglobal(L, "Sprites");
+    return 1;
+}
+
+//----------------------------------------------------------------------------------
+// lua_api_init — create Lua state, bind ui.* table, expose button constants
+//----------------------------------------------------------------------------------
+void lua_api_init(void) {
+    globalLuaState = luaL_newstate();
+    luaL_openlibs(globalLuaState);
+
+    lua_newtable(globalLuaState);
+
+    lua_pushcfunction(globalLuaState, lua_draw_line);
+    lua_setfield(globalLuaState, -2, "draw_line");
+
+    lua_pushcfunction(globalLuaState, lua_draw_rect);
+    lua_setfield(globalLuaState, -2, "draw_rect");
+
+    lua_pushcfunction(globalLuaState, lua_rect);
+    lua_setfield(globalLuaState, -2, "rect");
+
+    lua_pushcfunction(globalLuaState, lua_rectfill);
+    lua_setfield(globalLuaState, -2, "rectfill");
+
+    lua_pushcfunction(globalLuaState, lua_draw_circle);
+    lua_setfield(globalLuaState, -2, "draw_circle");
+
+    lua_pushcfunction(globalLuaState, lua_circfill);
+    lua_setfield(globalLuaState, -2, "circfill");
+
+    lua_pushcfunction(globalLuaState, lua_trisfill);
+    lua_setfield(globalLuaState, -2, "trisfill");
+
+    lua_pushcfunction(globalLuaState, lua_palset);
+    lua_setfield(globalLuaState, -2, "palset");
+
+    lua_pushcfunction(globalLuaState, lua_tile);
+    lua_setfield(globalLuaState, -2, "tile");
+
+    lua_pushcfunction(globalLuaState, lua_spr);
+    lua_setfield(globalLuaState, -2, "spr");
+
+    lua_pushcfunction(globalLuaState, lua_btn);
+    lua_setfield(globalLuaState, -2, "btn");
+
+    lua_pushcfunction(globalLuaState, lua_btnp);
+    lua_setfield(globalLuaState, -2, "btnp");
+
+    lua_pushcfunction(globalLuaState, lua_log);
+    lua_setfield(globalLuaState, -2, "log");
+
+    lua_pushcfunction(globalLuaState, lua_camera);
+    lua_setfield(globalLuaState, -2, "camera");
+
+    lua_pushcfunction(globalLuaState, lua_clip);
+    lua_setfield(globalLuaState, -2, "clip");
+
+    lua_pushcfunction(globalLuaState, lua_cls);
+    lua_setfield(globalLuaState, -2, "cls");
+
+    lua_pushcfunction(globalLuaState, lua_preload_spritesheet);
+    lua_setfield(globalLuaState, -2, "preload_spritesheet");
+
+    lua_pushcfunction(globalLuaState, lua_draw_sprite);
+    lua_setfield(globalLuaState, -2, "draw_sprite");
+
+    lua_pushcfunction(globalLuaState, lua_print);
+    lua_setfield(globalLuaState, -2, "print");
+
+    lua_pushcfunction(globalLuaState, lua_map);
+    lua_setfield(globalLuaState, -2, "map");
+
+    lua_pushcfunction(globalLuaState, lua_set_pallet);
+    lua_setfield(globalLuaState, -2, "set_pallet");
+
+    lua_pushcfunction(globalLuaState, lua_fillp);
+    lua_setfield(globalLuaState, -2, "fillp");
+
+    lua_setglobal(globalLuaState, "ui");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_RIGHT);
+    lua_setglobal(globalLuaState, "RIGHT");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_LEFT);
+    lua_setglobal(globalLuaState, "LEFT");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_UP);
+    lua_setglobal(globalLuaState, "UP");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_DOWN);
+    lua_setglobal(globalLuaState, "DOWN");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT);
+    lua_setglobal(globalLuaState, "BTN_Z");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_LEFT);
+    lua_setglobal(globalLuaState, "BTN_E");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_UP);
+    lua_setglobal(globalLuaState, "BTN_Q");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
+    lua_setglobal(globalLuaState, "BTN_Z");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_TRIGGER_1);
+    lua_setglobal(globalLuaState, "BTN_F");
+
+    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_TRIGGER_1);
+    lua_setglobal(globalLuaState, "BTN_G");
+}
+
+//----------------------------------------------------------------------------------
+// lua_api_setup_game — configure package path, register sprites preload, load game
+//----------------------------------------------------------------------------------
+void lua_api_setup_game(const char *game_dir) {
+    snprintf(current_game_dir, sizeof(current_game_dir), "%s", game_dir);
+
+    lua_getglobal(globalLuaState, "package");
+    lua_getfield(globalLuaState, -1, "path");
+    const char *current_path = lua_tostring(globalLuaState, -1);
+    lua_pop(globalLuaState, 1);
+
+    lua_pushfstring(globalLuaState, "%s;./%s/?.lua", current_path, game_dir);
+    lua_setfield(globalLuaState, -2, "path");
+
+    lua_getfield(globalLuaState, -1, "preload");
+    lua_pushcfunction(globalLuaState, lua_sprites_loader);
+    lua_setfield(globalLuaState, -2, "sprites");
+    lua_pop(globalLuaState, 2); // pop preload and package
+
+    char game_path[512];
+    snprintf(game_path, sizeof(game_path), "%s/game.lua", game_dir);
+    if (luaL_dofile(globalLuaState, game_path) != LUA_OK) {
+        printf("Error loading %s: %s\n", game_path, lua_tostring(globalLuaState, -1));
+        lua_pop(globalLuaState, 1);
+    } else {
+        printf("%s loaded successfully\n", game_path);
+    }
+}
+
+//----------------------------------------------------------------------------------
+// lua_api_call_update — call the Lua update() function if it exists
+//----------------------------------------------------------------------------------
+void lua_api_call_update(void) {
+    if (globalLuaState == NULL) return;
+
+    lua_getglobal(globalLuaState, "update");
+    if (lua_isfunction(globalLuaState, -1)) {
+        if (lua_pcall(globalLuaState, 0, 0, 0) != LUA_OK) {
+            printf("Error in update(): %s\n", lua_tostring(globalLuaState, -1));
+            lua_pop(globalLuaState, 1);
+        }
+    } else {
+        lua_pop(globalLuaState, 1);
+    }
+}
+
+//----------------------------------------------------------------------------------
+// lua_api_close — shut down the Lua state
+//----------------------------------------------------------------------------------
+void lua_api_close(void) {
+    lua_close(globalLuaState);
+    globalLuaState = NULL;
 }
