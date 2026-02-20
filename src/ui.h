@@ -3,22 +3,16 @@
 
 #include "types.h"
 
+extern const int screenWidth;
+extern const int screenHeight;
+
 /*
 Draw Functions
 */
-void add_line(int x1, int y1, int x2, int y2, Color color, int color_index);
 void draw_line(LineItem *line);
-
-void add_rect(int x, int y, int width, int height, bool filled, int color_index);
 void draw_rect(RectItem *rect);
-
-void add_circle(int center_x, int center_y, int radius, bool filled, int color_index, bool has_border, int border_color_index);
 void draw_circle(CircleItem *circle);
-
-void add_clear(int color_index);
 void draw_clear(ClearItem *clear);
-
-void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, int color_index);
 void draw_triangle(TriangleItem *triangle);
 
 /*

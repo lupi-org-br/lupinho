@@ -5,12 +5,6 @@
 #include "ui.h"
 #include "lua_api.h"
 
-/**
-Constants
-**/
-const int screenWidth = 480;
-const int screenHeight = 270;
-
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
 #endif

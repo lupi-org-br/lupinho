@@ -7,9 +7,9 @@
 /*
 Global vars
 */
-extern const int screenWidth;
-extern const int screenHeight;
-char frame_buffer[270][480];
+const int screenWidth = 480;
+const int screenHeight = 270;
+char frame_buffer[screenHeight][screenWidth];
 Color palette[PALETTE_SIZE];
 
 /*
@@ -73,18 +73,6 @@ bool should_draw_pixel_with_pattern(int x, int y, uint8_t pattern[8]) {
 /**
 Line Functions
 **/
-void add_line(int x1, int y1, int x2, int y2, Color color, int color_index) {
-    LineItem line = {
-        .x1 = x1,
-        .y1 = y1,
-        .x2 = x2,
-        .y2 = y2,
-        .color_index = color_index,
-    };
-
-    draw_line(&line);
-}
-
 void draw_line(LineItem *line) {
     int x1 = line->x1 - camera_x;
     int y1 = line->y1 - camera_y;
@@ -115,19 +103,6 @@ void draw_line(LineItem *line) {
 /**
 Rect Functions
 **/
-void add_rect(int x, int y, int width, int height, bool filled, int color_index) {
-    RectItem rect = {
-        .x = x,
-        .y = y,
-        .width = width,
-        .height = height,
-        .filled = filled,
-        .color_index = color_index,
-    };
-
-    draw_rect(&rect);
-}
-
 void draw_rect(RectItem *rect) {
     int rx = rect->x - camera_x;
     int ry = rect->y - camera_y;
@@ -165,20 +140,6 @@ void draw_rect(RectItem *rect) {
 /**
 Circle Functions
 **/
-void add_circle(int center_x, int center_y, int radius, bool filled, int color_index, bool has_border, int border_color_index) {
-    CircleItem circle = {
-        .center_x = center_x,
-        .center_y = center_y,
-        .radius = radius,
-        .filled = filled,
-        .color_index = color_index,
-        .has_border = has_border,
-        .border_color_index = border_color_index,
-    };
-
-    draw_circle(&circle);
-}
-
 // Helper function to draw circle pixels using midpoint algorithm
 void draw_circle_pixels(int cx, int cy, int x, int y, int color_index) {
     fb_set(cx + x, cy + y, color_index);
@@ -241,20 +202,6 @@ void draw_circle(CircleItem *circle) {
 /**
 Triangle Functions
 **/
-void add_triangle(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y, int color_index) {
-    TriangleItem triangle = {
-        .p1_x = p1_x,
-        .p1_y = p1_y,
-        .p2_x = p2_x,
-        .p2_y = p2_y,
-        .p3_x = p3_x,
-        .p3_y = p3_y,
-        .color_index = color_index,
-    };
-
-    draw_triangle(&triangle);
-}
-
 // Helper function to draw a horizontal line for triangle filling
 void draw_horizontal_line_fb(int x1, int x2, int y, int color_index) {
     if (x1 > x2) { int tmp = x1; x1 = x2; x2 = tmp; }
@@ -335,14 +282,6 @@ Color get_palette_color(int index) {
 /**
 Clear Functions
 **/
-void add_clear(int color_index) {
-    ClearItem clear = {
-        .color_index = color_index,
-    };
-
-    draw_clear(&clear);
-}
-
 void draw_clear(ClearItem *clear) {
     // Fill entire frame buffer with the color index
     for (int y = 0; y < screenHeight; y++) {
