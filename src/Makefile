@@ -2,7 +2,7 @@
 CC = emcc
 
 # Source Files
-SRC = webassembly.c ui.c lua_api.c
+SRC = main.c ui.c lua_api.c
 
 # Output File
 OUTPUT = ../dist/game.html
