@@ -3,8 +3,9 @@
 
 #include "types.h"
 
-extern const int screenWidth;
-extern const int screenHeight;
+#define SCREEN_WIDTH  480
+#define SCREEN_HEIGHT 270
+#define PALETTE_SIZE 256
 
 /*
 Draw Functions
@@ -18,8 +19,6 @@ void draw_triangle(TriangleItem *triangle);
 /*
 Palette Functions
 */
-#define PALETTE_SIZE 256
-extern Color palette[PALETTE_SIZE];
 void palset(int position, int bgr555);
 Color get_palette_color(int index);
 
@@ -53,7 +52,7 @@ void reset_clip(void);
 /*
 Frame Buffer Functions
 */
-extern char frame_buffer[270][480];
+extern char frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 void fb_set(int x, int y, int color);
 void clear_frame_buffer();
 void draw_frame_buffer();

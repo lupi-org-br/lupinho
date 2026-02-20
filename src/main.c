@@ -30,7 +30,7 @@ void UpdateDrawFrame() {
 int main() {
     lua_api_init();
 
-    InitWindow(screenWidth, screenHeight, "Lupi Emulator");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lupi Emulator");
 
     lua_api_setup_game("game-example");
 

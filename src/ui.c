@@ -4,31 +4,29 @@
 #include "ui.h"
 #include "font.h"
 
-/*
-Global vars
-*/
-const int screenWidth = 480;
-const int screenHeight = 270;
-char frame_buffer[screenHeight][screenWidth];
+//----------------------------------------------------------------------------------
+// Global vars
+//----------------------------------------------------------------------------------
+char frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 Color palette[PALETTE_SIZE];
 
-/*
-Fill pattern
-*/
+//----------------------------------------------------------------------------------
+// Fill pattern
+//----------------------------------------------------------------------------------
 uint8_t fill_pattern[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-/*
-Camera
-*/
+//----------------------------------------------------------------------------------
+// Camera
+//----------------------------------------------------------------------------------
 int camera_x = 0;
 int camera_y = 0;
 
 void set_camera(int x, int y) { camera_x = x; camera_y = y; }
 void reset_camera(void)       { camera_x = 0; camera_y = 0; }
 
-/*
-Clip region
-*/
+//----------------------------------------------------------------------------------
+// Clip region
+//----------------------------------------------------------------------------------
 int  clip_x = 0;
 int  clip_y = 0;
 int  clip_w = 0;
@@ -41,12 +39,12 @@ void set_clip(int x, int y, int w, int h) {
 }
 void reset_clip(void) { clip_enabled = false; }
 
-/*
-Frame buffer pixel write — enforces bounds and clip region.
-All drawing functions must use this instead of writing frame_buffer directly.
-*/
+//----------------------------------------------------------------------------------
+// Frame buffer pixel write — enforces bounds and clip region.
+// All drawing functions must use this instead of writing frame_buffer directly.
+//----------------------------------------------------------------------------------
 void fb_set(int x, int y, int color) {
-    if (x < 0 || x >= screenWidth || y < 0 || y >= screenHeight) return;
+    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return;
     if (clip_enabled) {
         if (x < clip_x || x >= clip_x + clip_w ||
             y < clip_y || y >= clip_y + clip_h) return;
@@ -70,9 +68,9 @@ bool should_draw_pixel_with_pattern(int x, int y, uint8_t pattern[8]) {
     return (pattern[row] & (1 << (7 - col))) != 0;
 }
 
-/**
-Line Functions
-**/
+//----------------------------------------------------------------------------------
+// Line Functions
+//----------------------------------------------------------------------------------
 void draw_line(LineItem *line) {
     int x1 = line->x1 - camera_x;
     int y1 = line->y1 - camera_y;
@@ -100,9 +98,9 @@ void draw_line(LineItem *line) {
     }
 }
 
-/**
-Rect Functions
-**/
+//----------------------------------------------------------------------------------
+// Rect Functions
+//----------------------------------------------------------------------------------
 void draw_rect(RectItem *rect) {
     int rx = rect->x - camera_x;
     int ry = rect->y - camera_y;
@@ -137,10 +135,9 @@ void draw_rect(RectItem *rect) {
     }
 }
 
-/**
-Circle Functions
-**/
-// Helper function to draw circle pixels using midpoint algorithm
+//----------------------------------------------------------------------------------
+// Circle Functions
+//----------------------------------------------------------------------------------
 void draw_circle_pixels(int cx, int cy, int x, int y, int color_index) {
     fb_set(cx + x, cy + y, color_index);
     fb_set(cx - x, cy + y, color_index);
@@ -199,10 +196,9 @@ void draw_circle(CircleItem *circle) {
     }
 }
 
-/**
-Triangle Functions
-**/
-// Helper function to draw a horizontal line for triangle filling
+//----------------------------------------------------------------------------------
+// Triangle Functions
+//----------------------------------------------------------------------------------
 void draw_horizontal_line_fb(int x1, int x2, int y, int color_index) {
     if (x1 > x2) { int tmp = x1; x1 = x2; x2 = tmp; }
     for (int x = x1; x <= x2; x++) fb_set(x, y, color_index);
@@ -253,9 +249,9 @@ void draw_triangle(TriangleItem *triangle) {
     }
 }
 
-/**
-Palette Functions
-**/
+//----------------------------------------------------------------------------------
+// Palette Functions
+//----------------------------------------------------------------------------------
 void palset(int position, int bgr555) {
     if (position < 0 || position >= PALETTE_SIZE) return;
 
@@ -279,19 +275,19 @@ Color get_palette_color(int index) {
     return palette[index];
 }
 
-/**
-Clear Functions
-**/
+//----------------------------------------------------------------------------------
+// Clear Functions
+//----------------------------------------------------------------------------------
 void draw_clear(ClearItem *clear) {
     // Fill entire frame buffer with the color index
-    for (int y = 0; y < screenHeight; y++) {
-        memset(frame_buffer[y], clear->color_index, screenWidth);
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        memset(frame_buffer[y], clear->color_index, SCREEN_WIDTH);
     }
 }
 
-/*
-* Print (bitmap font) Functions
-*/
+//----------------------------------------------------------------------------------
+// Print (bitmap font) Functions
+//----------------------------------------------------------------------------------
 void draw_print(const char *text, int x, int y, int color_index) {
     int cursor_x = x - camera_x;
     int base_y   = y - camera_y;
@@ -314,18 +310,18 @@ void draw_print(const char *text, int x, int y, int color_index) {
     }
 }
 
-/*
-* Frame Buffer Functions
-*/
+//----------------------------------------------------------------------------------
+// Frame Buffer Functions
+//----------------------------------------------------------------------------------
 Texture scene;
 
 Image generate_image_from_frame_buffer() {
-    Image image = GenImageColor(screenWidth, screenHeight, BLANK);
+    Image image = GenImageColor(SCREEN_WIDTH, SCREEN_HEIGHT, BLANK);
     Color *pixels = (Color *)image.data;
 
-    for(int i = 0; i < screenHeight; i++) {
-        for(int j = 0; j < screenWidth; j++) {
-            int pixel_index = j + (screenWidth * i);
+    for(int i = 0; i < SCREEN_HEIGHT; i++) {
+        for(int j = 0; j < SCREEN_WIDTH; j++) {
+            int pixel_index = j + (SCREEN_WIDTH * i);
             pixels[pixel_index] = get_palette_color(frame_buffer[i][j]);
         }
     }
@@ -336,9 +332,9 @@ Image generate_image_from_frame_buffer() {
 void draw_frame_buffer() {
     Image image = generate_image_from_frame_buffer();
     scene = LoadTextureFromImage(image);
- 
-    Rectangle source = { 0, 0, screenWidth, screenHeight };
-    Rectangle dest = { 0, 0, screenWidth, screenHeight };
+
+    Rectangle source = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
+    Rectangle dest = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
     Vector2 origin = { 0, 0 };
 
     DrawTexturePro(scene, source, dest, origin, 0, WHITE);
@@ -346,16 +342,16 @@ void draw_frame_buffer() {
 }
 
 void clear_frame_buffer() {
-    for(int i = 0; i < screenHeight; i++) {
-        memset(frame_buffer[i], 0, screenWidth);
+    for(int i = 0; i < SCREEN_HEIGHT; i++) {
+        memset(frame_buffer[i], 0, SCREEN_WIDTH);
     }
 
     UnloadTexture(scene);
 }
 
-/**
-Tile Functions
-**/
+//----------------------------------------------------------------------------------
+// Tile Functions
+//----------------------------------------------------------------------------------
 void draw_tile(const char *path, int width, int height, int tile_index, int x, int y, bool flipped) {
     x -= camera_x;
     y -= camera_y;
@@ -390,9 +386,9 @@ void draw_tile(const char *path, int width, int height, int tile_index, int x, i
     free(data);
 }
 
-/**
-Sprite Functions
-**/
+//----------------------------------------------------------------------------------
+// Sprite Functions
+//----------------------------------------------------------------------------------
 void draw_spr(const char *path, int width, int height, int x, int y, bool flipped) {
     x -= camera_x;
     y -= camera_y;
@@ -423,17 +419,17 @@ void draw_spr(const char *path, int width, int height, int x, int y, bool flippe
     free(data);
 }
 
-/**
-Fill Pattern Functions
-**/
+//----------------------------------------------------------------------------------
+// Fill Pattern Functions
+//----------------------------------------------------------------------------------
 void set_fillp(uint8_t *bytes, int n) {
     for (int i = 0; i < n && i < 8; i++) fill_pattern[i] = bytes[i];
     for (int i = n; i < 8; i++)          fill_pattern[i] = 0;
 }
 
-/**
-Map Functions
-**/
+//----------------------------------------------------------------------------------
+// Map Functions
+//----------------------------------------------------------------------------------
 void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x, int cam_y) {
     FILE *f = fopen(data->path, "rb");
     if (!f) {
@@ -483,5 +479,3 @@ void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x,
 
     free(file_buf);
 }
-
-
