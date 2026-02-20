@@ -18,7 +18,8 @@ int lua_draw_line(lua_State *L) {
     int y2 = (int)luaL_checknumber(L, 4);
     int color = (int)luaL_checknumber(L, 5);
 
-    add_line(x1, y1, x2, y2, get_palette_color(color), color);
+    LineItem line = { .x1 = x1, .y1 = y1, .x2 = x2, .y2 = y2, .color_index = color };
+    draw_line(&line);
 
     return 0;
 }
@@ -34,7 +35,8 @@ int lua_draw_rect(lua_State *L) {
     bool filled = lua_toboolean(L, 5);
     int color = (int)luaL_checknumber(L, 6);
 
-    add_rect(x, y, width, height, filled, color);
+    RectItem rect = { .x = x, .y = y, .width = width, .height = height, .filled = filled, .color_index = color };
+    draw_rect(&rect);
 
     return 0;
 }
@@ -49,7 +51,8 @@ int lua_rect(lua_State *L) {
     int y2 = (int)luaL_checknumber(L, 4);
     int color = (int)luaL_checknumber(L, 5);
 
-    add_rect(x1, y1, (x2 - x1), (y2 - y1), false, color);
+    RectItem rect = { .x = x1, .y = y1, .width = x2 - x1, .height = y2 - y1, .filled = false, .color_index = color };
+    draw_rect(&rect);
 
     return 0;
 }
@@ -64,7 +67,8 @@ int lua_rectfill(lua_State *L) {
     int y2 = (int)luaL_checknumber(L, 4);
     int color = (int)luaL_checknumber(L, 5);
 
-    add_rect(x1, y1, (x2 - x1), (y2 - y1), true, color);
+    RectItem rect = { .x = x1, .y = y1, .width = x2 - x1, .height = y2 - y1, .filled = true, .color_index = color };
+    draw_rect(&rect);
 
     return 0;
 }
@@ -81,7 +85,12 @@ int lua_draw_circle(lua_State *L) {
     bool border = lua_toboolean(L, 6);
     int border_color = (int)luaL_checknumber(L, 7);
 
-    add_circle(center_x, center_y, radius, filled, color, border, border_color);
+    CircleItem circle = {
+        .center_x = center_x, .center_y = center_y, .radius = radius,
+        .filled = filled, .color_index = color,
+        .has_border = border, .border_color_index = border_color,
+    };
+    draw_circle(&circle);
 
     return 0;
 }
@@ -95,7 +104,12 @@ int lua_circfill(lua_State *L) {
     int radius = (int)luaL_checknumber(L, 3);
     int color = (int)luaL_checknumber(L, 4);
 
-    add_circle(center_x, center_y, radius, true, color, true, color);
+    CircleItem circle = {
+        .center_x = center_x, .center_y = center_y, .radius = radius,
+        .filled = true, .color_index = color,
+        .has_border = true, .border_color_index = color,
+    };
+    draw_circle(&circle);
 
     return 0;
 }
@@ -112,7 +126,13 @@ int lua_trisfill(lua_State *L) {
     int p3_y = (int)luaL_checknumber(L, 6);
     int color = (int)luaL_checknumber(L, 7);
 
-    add_triangle(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, color);
+    TriangleItem triangle = {
+        .p1_x = p1_x, .p1_y = p1_y,
+        .p2_x = p2_x, .p2_y = p2_y,
+        .p3_x = p3_x, .p3_y = p3_y,
+        .color_index = color,
+    };
+    draw_triangle(&triangle);
 
     return 0;
 }
@@ -259,7 +279,8 @@ int lua_btnp(lua_State *L) {
 //----------------------------------------------------------------------------------
 int lua_cls(lua_State *L) {
     int color = (int)luaL_checknumber(L, 1);
-    add_clear(color);
+    ClearItem clear = { .color_index = color };
+    draw_clear(&clear);
 
     return 0;
 }
@@ -287,9 +308,6 @@ int lua_fillp(lua_State *L) {
     set_fillp(bytes, nargs);
     return 0;
 }
-
-
-// TODO
 
 //----------------------------------------------------------------------------------
 // ui.map(map_data, cam_x, cam_y)

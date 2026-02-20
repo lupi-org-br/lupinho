@@ -124,7 +124,6 @@ void add_rect(int x, int y, int width, int height, bool filled, int color_index)
         .filled = filled,
         .color_index = color_index,
     };
-    memcpy(rect.fill_pattern, fill_pattern, sizeof(fill_pattern));
 
     draw_rect(&rect);
 }
@@ -138,13 +137,13 @@ void draw_rect(RectItem *rect) {
     if(rect->filled) {
         bool has_pattern = false;
         for (int i = 0; i < 8; i++) {
-            if (rect->fill_pattern[i] != 0) { has_pattern = true; break; }
+            if (fill_pattern[i] != 0) { has_pattern = true; break; }
         }
 
         for (int py = ry; py < ry + rh; py++) {
             for (int px = rx; px < rx + rw; px++) {
                 if (has_pattern) {
-                    if (should_draw_pixel_with_pattern(px, py, rect->fill_pattern))
+                    if (should_draw_pixel_with_pattern(px, py, fill_pattern))
                         fb_set(px, py, rect->color_index);
                 } else {
                     fb_set(px, py, rect->color_index);
@@ -176,7 +175,6 @@ void add_circle(int center_x, int center_y, int radius, bool filled, int color_i
         .has_border = has_border,
         .border_color_index = border_color_index,
     };
-    memcpy(circle.fill_pattern, fill_pattern, sizeof(fill_pattern));
 
     draw_circle(&circle);
 }
@@ -200,7 +198,7 @@ void draw_circle(CircleItem *circle) {
     if(circle->filled) {
         bool has_pattern = false;
         for (int i = 0; i < 8; i++) {
-            if (circle->fill_pattern[i] != 0) { has_pattern = true; break; }
+            if (fill_pattern[i] != 0) { has_pattern = true; break; }
         }
 
         int radius_squared = circle->radius * circle->radius;
@@ -210,7 +208,7 @@ void draw_circle(CircleItem *circle) {
                 int dy = py - cy;
                 if (dx * dx + dy * dy <= radius_squared) {
                     if (has_pattern) {
-                        if (should_draw_pixel_with_pattern(px, py, circle->fill_pattern))
+                        if (should_draw_pixel_with_pattern(px, py, fill_pattern))
                             fb_set(px, py, circle->color_index);
                     } else {
                         fb_set(px, py, circle->color_index);
