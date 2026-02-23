@@ -52,7 +52,7 @@ void reset_clip(void);
 //----------------------------------------------------------------------------------
 // Frame Buffer Functions
 //----------------------------------------------------------------------------------
-extern char frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+extern unsigned char frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 void fb_set(int x, int y, int color);
 void clear_frame_buffer();
 void draw_frame_buffer();
