@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **lupinho** (10218 symbols, 12996 relationships, 0 execution flows).
+This project is indexed by GitNexus as **lupinho** (10197 symbols, 12974 relationships, 0 execution flows).
 
 ## Always Start Here
 
