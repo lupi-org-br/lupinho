@@ -1,8 +1,9 @@
 dist/*
 !dist/.keep
+site/index.zip
 site/dist/*
 !site/dist/.keep
 docs/*
 !docs/.keep
 game-example*
-.gitnexus
+
