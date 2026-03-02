@@ -6,4 +6,3 @@ site/dist/*
 docs/*
 !docs/.keep
 game-example*
-

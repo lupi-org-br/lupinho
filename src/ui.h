@@ -1,6 +1,7 @@
 #ifndef UI_H
 #define UI_H
 
+#include <stdint.h>
 #include "types.h"
 
 #define SCREEN_WIDTH  480
@@ -52,7 +53,7 @@ void reset_clip(void);
 //----------------------------------------------------------------------------------
 // Frame Buffer Functions
 //----------------------------------------------------------------------------------
-extern unsigned char frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+extern uint8_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 void fb_set(int x, int y, int color);
 void clear_frame_buffer();
 void draw_frame_buffer();

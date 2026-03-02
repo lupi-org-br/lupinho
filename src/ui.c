@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "ui.h"
 #include "font.h"
@@ -7,7 +8,7 @@
 //----------------------------------------------------------------------------------
 // Global vars
 //----------------------------------------------------------------------------------
-unsigned char frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+uint8_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 Color palette[PALETTE_SIZE];
 
 //----------------------------------------------------------------------------------
@@ -49,7 +50,7 @@ void fb_set(int x, int y, int color) {
         if (x < clip_x || x >= clip_x + clip_w ||
             y < clip_y || y >= clip_y + clip_h) return;
     }
-    frame_buffer[y][x] = (char)color;
+    frame_buffer[y][x] = (uint8_t)color;
 }
 
 bool should_draw_pixel_with_pattern(int x, int y, uint8_t pattern[8]) {
@@ -293,7 +294,7 @@ void draw_print(const char *text, int x, int y, int color_index) {
     int base_y   = y - camera_y;
 
     for (int i = 0; text[i] != '\0'; i++) {
-        unsigned char c = (unsigned char)text[i];
+        uint8_t c = (uint8_t)text[i];
 
         if (c < 32 || c > 126) continue;
 
@@ -367,7 +368,7 @@ void draw_tile(const char *path, int width, int height, int tile_index, int x, i
 
     fseek(f, data_offset, SEEK_SET);
 
-    unsigned char *data = (unsigned char *) malloc(tile_size);
+    uint8_t *data = (uint8_t *) malloc(tile_size);
     if (!data) { fclose(f); return; }
 
     fread(data, 1, tile_size, f);
@@ -375,7 +376,7 @@ void draw_tile(const char *path, int width, int height, int tile_index, int x, i
 
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
-            unsigned char idx = data[row * width + col];
+            uint8_t idx = data[row * width + col];
             if (idx == 0) continue;
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
@@ -400,7 +401,7 @@ void draw_spr(const char *path, int width, int height, int x, int y, bool flippe
     }
 
     int data_size = width * height;
-    unsigned char *data = (unsigned char *) malloc(data_size);
+    uint8_t *data = (uint8_t *) malloc(data_size);
     if (!data) { fclose(f); return; }
 
     fread(data, 1, data_size, f);
@@ -408,7 +409,7 @@ void draw_spr(const char *path, int width, int height, int x, int y, bool flippe
 
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
-            unsigned char idx = data[row * width + col];
+            uint8_t idx = data[row * width + col];
             if (idx == 0) continue;
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
@@ -441,7 +442,7 @@ void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x,
     long file_size = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    unsigned char *file_buf = (unsigned char *)malloc(file_size);
+    uint8_t *file_buf = (uint8_t *)malloc(file_size);
     if (!file_buf) { fclose(f); return; }
 
     fread(file_buf, 1, file_size, f);
@@ -465,10 +466,10 @@ void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x,
         int sx  = col * tile_size + cam_x;
         int sy  = row * tile_size + cam_y;
 
-        unsigned char *tile_data = file_buf + offset;
+        uint8_t *tile_data = file_buf + offset;
         for (int ty = 0; ty < data->tile_h; ty++) {
             for (int tx = 0; tx < data->tile_w; tx++) {
-                unsigned char idx = tile_data[ty * data->tile_w + tx];
+                uint8_t idx = tile_data[ty * data->tile_w + tx];
                 if (idx == 0) continue;
                 int px = flip_x ? (sx + data->tile_w - 1 - tx) : (sx + tx);
                 int py = flip_y ? (sy + data->tile_h - 1 - ty) : (sy + ty);
