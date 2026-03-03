@@ -10,6 +10,7 @@
 lua_State *globalLuaState = NULL;
 
 static char current_game_dir[512] = "";
+static lua_Number frame_counter = 0;
 
 //----------------------------------------------------------------------------------
 // UI Functions
@@ -590,6 +591,7 @@ static int lua_sprites_loader(lua_State *L) {
 // lua_api_init — create Lua state, bind ui.* table, expose button constants
 //----------------------------------------------------------------------------------
 void lua_api_init(void) {
+    frame_counter = 0;
     globalLuaState = luaL_newstate();
     luaL_openlibs(globalLuaState);
 
@@ -730,7 +732,9 @@ void lua_api_call_update(void) {
 
     lua_getglobal(globalLuaState, "update");
     if (lua_isfunction(globalLuaState, -1)) {
-        if (lua_pcall(globalLuaState, 0, 0, 0) != LUA_OK) {
+        lua_pushnumber(globalLuaState, frame_counter);
+        frame_counter++;
+        if (lua_pcall(globalLuaState, 1, 0, 0) != LUA_OK) {
             printf("Error in update(): %s\n", lua_tostring(globalLuaState, -1));
             lua_pop(globalLuaState, 1);
         }
