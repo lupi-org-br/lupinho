@@ -5,4 +5,5 @@ site/dist/*
 !site/dist/.keep
 docs/*
 !docs/.keep
+game.lupi
 game-example*

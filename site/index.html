@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lupi Player - Console Emulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
     <style>
         :root {
             --bg-color: #0f0f12;
@@ -369,6 +370,30 @@
             text-align: center;
         }
 
+        .file-picker-panel {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; width: 100%; max-width: 800px;
+            background-color: var(--panel-color); border-radius: var(--border-radius);
+            padding: 3rem 2rem; gap: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .hidden { display: none !important; }
+        .drop-zone {
+            width: 100%; max-width: 480px; border: 2px dashed rgba(114,93,236,0.5);
+            border-radius: var(--border-radius); padding: 3rem 2rem;
+            text-align: center; color: #7c7c8a; cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+        .drop-zone.drag-over { border-color: var(--accent-color); background-color: rgba(114,93,236,0.08); color: var(--text-color); }
+        .drop-zone-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+        .drop-zone p { margin: 0.5rem 0; font-size: 0.95rem; }
+        .drop-zone .hint { font-size: 0.8rem; color: #4a4a5a; }
+        #lupi-file-input { display: none; }
+        .load-status { font-size: 0.85rem; color: #7c7c8a; min-height: 1.2em; text-align: center; }
+        .load-status.error { color: var(--danger-color); }
+        .load-status.success { color: var(--success-color); }
+        .btn-load-game { background-color: #2d2d3d; color: white; padding: 0.75rem 1.5rem; }
+        .btn-load-game:hover { background-color: var(--accent-color); }
+
         /* Fullscreen handling */
         #player-container:fullscreen {
             width: 100vw !important;
@@ -411,7 +436,21 @@
     </header>
 
     <div class="container">
-        <div class="game-area">
+        <div class="file-picker-panel" id="file-picker-panel">
+            <div class="drop-zone" id="drop-zone">
+                <span class="drop-zone-icon">&#128190;</span>
+                <p>Arraste um arquivo <strong>.lupi</strong> aqui</p>
+                <p>ou</p>
+                <button class="action primary" onclick="document.getElementById('lupi-file-input').click()">
+                    Selecionar Arquivo
+                </button>
+                <p class="hint">.lupi &mdash; cartucho de jogo Lupi</p>
+            </div>
+            <div class="load-status" id="load-status"></div>
+            <input type="file" id="lupi-file-input" accept=".lupi">
+        </div>
+
+        <div class="game-area hidden">
             <div class="game-container" id="player-container">
                 <div class="scaling-wrapper" id="scaling-wrapper">
                     <div class="crt-overlay" id="crt-overlay"></div>
@@ -433,7 +472,7 @@
             </div>
         </div>
 
-        <div class="controls-panel">
+        <div class="controls-panel hidden">
             <div class="control-row">
                 <div class="control-group">
                     <span class="label">Resolução:</span>
@@ -452,6 +491,10 @@
 
                 <div class="control-group">
                     <button class="action primary" onclick="toggleFullscreen()">TELA CHEIA</button>
+                </div>
+
+                <div class="control-group">
+                    <button class="btn-load-game" onclick="showFilePicker()">Carregar Jogo</button>
                 </div>
             </div>
         </div>
@@ -482,6 +525,83 @@
         let currentScale = localStorage.getItem('lupi_scale') || '2';
         let crtEnabled = localStorage.getItem('lupi_crt') === 'true';
 
+        function getModule() {
+            try {
+                const m = frame.contentWindow.Module;
+                if (m && m.ccall && m.FS) return m;
+            } catch (e) {}
+            return null;
+        }
+
+        const filePicker = document.getElementById('file-picker-panel');
+        const dropZone   = document.getElementById('drop-zone');
+        const fileInput  = document.getElementById('lupi-file-input');
+        const loadStatus = document.getElementById('load-status');
+
+        function showFilePicker() { filePicker.classList.remove('hidden'); setLoadStatus(''); }
+        function hideFilePicker() {
+            filePicker.classList.add('hidden');
+            document.querySelector('.game-area').classList.remove('hidden');
+            document.querySelector('.controls-panel').classList.remove('hidden');
+        }
+        function setLoadStatus(msg, type) {
+            loadStatus.textContent = msg;
+            loadStatus.className = 'load-status' + (type ? ' ' + type : '');
+        }
+
+        function recursiveFsDelete(FS, path) {
+            let entries;
+            try { entries = FS.readdir(path); } catch (e) { return; }
+            for (const name of entries) {
+                if (name === '.' || name === '..') continue;
+                const full = path + '/' + name;
+                const st = FS.stat(full);
+                if (FS.isDir(st.mode)) { recursiveFsDelete(FS, full); FS.rmdir(full); }
+                else { FS.unlink(full); }
+            }
+        }
+
+        function writeZipToFS(FS, unzipped) {
+            const ROOT = '/loaded_game';
+            recursiveFsDelete(FS, ROOT);
+            try { FS.mkdir(ROOT); } catch (e) {}
+            for (const [relativePath, data] of Object.entries(unzipped)) {
+                if (relativePath.endsWith('/')) continue;
+                const fullPath = ROOT + '/' + relativePath;
+                const parts = relativePath.split('/');
+                let current = ROOT;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    current += '/' + parts[i];
+                    try { FS.mkdir(current); } catch (e) {}
+                }
+                FS.writeFile(fullPath, data);
+            }
+        }
+
+        async function loadLupiFile(file) {
+            setLoadStatus('Lendo arquivo...');
+            const M = getModule();
+            if (!M) { setLoadStatus('Emulador ainda não está pronto.', 'error'); return; }
+            let arrayBuffer;
+            try { arrayBuffer = await file.arrayBuffer(); }
+            catch (e) { setLoadStatus('Erro ao ler arquivo: ' + e.message, 'error'); return; }
+            setLoadStatus('Descompactando...');
+            let unzipped;
+            try { unzipped = fflate.unzipSync(new Uint8Array(arrayBuffer)); }
+            catch (e) { setLoadStatus('Arquivo .lupi inválido: ' + e.message, 'error'); return; }
+            if (!unzipped['game.lua']) {
+                setLoadStatus('Arquivo .lupi inválido: game.lua não encontrado.', 'error'); return;
+            }
+            setLoadStatus('Escrevendo no sistema de arquivos...');
+            try { writeZipToFS(M.FS, unzipped); }
+            catch (e) { setLoadStatus('Erro ao escrever no FS: ' + e.message, 'error'); return; }
+            setLoadStatus('Iniciando jogo...');
+            try { M.ccall('lupi_load_game', null, ['string'], ['loaded_game']); }
+            catch (e) { setLoadStatus('Erro ao iniciar o jogo: ' + e.message, 'error'); return; }
+            setLoadStatus('Jogo carregado!', 'success');
+            hideFilePicker();
+        }
+
         function init() {
             // Apply saved settings
             changeScale(currentScale);
@@ -493,6 +613,28 @@
 
             // Virtual Gamepad Handlers
             setupVirtualGamepad();
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) loadLupiFile(file);
+                fileInput.value = '';
+            });
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file) loadLupiFile(file);
+                else setLoadStatus('Selecione um arquivo .lupi válido.', 'error');
+            });
+
+            // Poll for Module readiness
+            const readyInterval = setInterval(() => {
+                if (getModule()) {
+                    clearInterval(readyInterval);
+                    setLoadStatus('Emulador pronto. Carregue um jogo .lupi para começar.');
+                }
+            }, 200);
         }
 
         function changeScale(scale) {

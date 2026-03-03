@@ -23,12 +23,13 @@ CFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces
 EMFLAGS = -s USE_GLFW=3
 # Note: ASYNCIFY removed - not needed and causes ~50% performance overhead
 EMFLAGS += -s TOTAL_MEMORY=67108864
+EMFLAGS += -s STACK_SIZE=1048576
 EMFLAGS += -s FORCE_FILESYSTEM=1
 EMFLAGS += --shell-file libs/raylib-web/minshell.html
 EMFLAGS += -DPLATFORM_WEB
 
-# Preload game-example directory into the virtual filesystem
-EMFLAGS += --preload-file ../game-example@/game-example
+EMFLAGS += -s EXPORTED_FUNCTIONS='["_main", "_lupi_load_game", "_malloc", "_free"]'
+EMFLAGS += -s EXPORTED_RUNTIME_METHODS='["ccall", "FS"]'
 
 # Optimization
 OPTIMIZATION = -O2

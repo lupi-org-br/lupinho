@@ -701,10 +701,10 @@ void lua_api_setup_game(const char *game_dir) {
     snprintf(current_game_dir, sizeof(current_game_dir), "%s", game_dir);
 
     lua_getglobal(globalLuaState, "package");
+
     lua_getfield(globalLuaState, -1, "path");
     const char *current_path = lua_tostring(globalLuaState, -1);
     lua_pop(globalLuaState, 1);
-
     lua_pushfstring(globalLuaState, "%s;./%s/?.lua", current_path, game_dir);
     lua_setfield(globalLuaState, -2, "path");
 
@@ -715,11 +715,10 @@ void lua_api_setup_game(const char *game_dir) {
 
     char game_path[512];
     snprintf(game_path, sizeof(game_path), "%s/game.lua", game_dir);
+
     if (luaL_dofile(globalLuaState, game_path) != LUA_OK) {
-        printf("Error loading %s: %s\n", game_path, lua_tostring(globalLuaState, -1));
+        printf("Error loading game: %s\n", lua_tostring(globalLuaState, -1));
         lua_pop(globalLuaState, 1);
-    } else {
-        printf("%s loaded successfully\n", game_path);
     }
 }
 

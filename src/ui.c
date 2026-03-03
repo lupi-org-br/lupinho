@@ -429,6 +429,17 @@ void set_fillp(uint8_t *bytes, int n) {
 }
 
 //----------------------------------------------------------------------------------
+// UI Reset
+//----------------------------------------------------------------------------------
+void reset_ui_state(void) {
+    reset_camera();
+    reset_clip();
+    clear_frame_buffer();
+    memset(palette, 0, sizeof(palette));
+    memset(fill_pattern, 0, sizeof(fill_pattern));
+}
+
+//----------------------------------------------------------------------------------
 // Map Functions
 //----------------------------------------------------------------------------------
 void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x, int cam_y) {
