@@ -598,7 +598,7 @@ void lua_api_init(void) {
     lua_newtable(globalLuaState);
 
     lua_pushcfunction(globalLuaState, lua_draw_line);
-    lua_setfield(globalLuaState, -2, "draw_line");
+    lua_setfield(globalLuaState, -2, "line");
 
     lua_pushcfunction(globalLuaState, lua_draw_rect);
     lua_setfield(globalLuaState, -2, "draw_rect");
