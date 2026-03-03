@@ -376,7 +376,7 @@
             background-color: var(--panel-color); border-radius: var(--border-radius);
             padding: 3rem 2rem; gap: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .file-picker-panel.hidden { display: none; }
+        .hidden { display: none !important; }
         .drop-zone {
             width: 100%; max-width: 480px; border: 2px dashed rgba(114,93,236,0.5);
             border-radius: var(--border-radius); padding: 3rem 2rem;
@@ -450,7 +450,7 @@
             <input type="file" id="lupi-file-input" accept=".lupi">
         </div>
 
-        <div class="game-area">
+        <div class="game-area hidden">
             <div class="game-container" id="player-container">
                 <div class="scaling-wrapper" id="scaling-wrapper">
                     <div class="crt-overlay" id="crt-overlay"></div>
@@ -472,7 +472,7 @@
             </div>
         </div>
 
-        <div class="controls-panel">
+        <div class="controls-panel hidden">
             <div class="control-row">
                 <div class="control-group">
                     <span class="label">Resolução:</span>
@@ -539,7 +539,11 @@
         const loadStatus = document.getElementById('load-status');
 
         function showFilePicker() { filePicker.classList.remove('hidden'); setLoadStatus(''); }
-        function hideFilePicker() { filePicker.classList.add('hidden'); }
+        function hideFilePicker() {
+            filePicker.classList.add('hidden');
+            document.querySelector('.game-area').classList.remove('hidden');
+            document.querySelector('.controls-panel').classList.remove('hidden');
+        }
         function setLoadStatus(msg, type) {
             loadStatus.textContent = msg;
             loadStatus.className = 'load-status' + (type ? ' ' + type : '');
