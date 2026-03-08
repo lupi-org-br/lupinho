@@ -538,38 +538,54 @@ void inject_sprites_global(lua_State *L, const char *manifest_path, const char *
         p = strstr(json, "\"tiles\":");
         if (p) sscanf(p + 8, "%d", &ntiles);
 
-        char *slash = strchr(path, '/');
-        if (!slash) continue;
+        // Create nested table structure from path (e.g., "img/sprites/star/star_a")
+        // First, duplicate path since strtok modifies it
+        char path_copy[256];
+        strncpy(path_copy, path, sizeof(path_copy) - 1);
+        path_copy[sizeof(path_copy) - 1] = '\0';
 
-        *slash = '\0';
-        const char *ns = path;
-        const char *key = slash + 1;
-
+        // Build full path for the file system
         char full_path[512];
-        snprintf(full_path, sizeof(full_path), "%s/%s/%s", game_dir, ns, key);
+        snprintf(full_path, sizeof(full_path), "%s/%s", game_dir, path);
 
-        // Get or create namespace sub-table
-        lua_getfield(L, -1, ns);
-        if (!lua_istable(L, -1)) {
-            lua_pop(L, 1);
-            lua_newtable(L);
-            lua_pushvalue(L, -1);
-            lua_setfield(L, -3, ns);
+        // Navigate/create nested tables for each path component except the last
+        char *token = strtok(path_copy, "/");
+        int depth = 0;
+
+        while (token != NULL) {
+            char *next_token = strtok(NULL, "/");
+
+            if (next_token == NULL) {
+                // Last token - create the entry table
+                lua_newtable(L);
+                lua_pushstring(L, full_path);
+                lua_setfield(L, -2, "path");
+                lua_pushinteger(L, width);
+                lua_setfield(L, -2, "width");
+                lua_pushinteger(L, height);
+                lua_setfield(L, -2, "height");
+                lua_pushinteger(L, ntiles);
+                lua_setfield(L, -2, "ntiles");
+                lua_setfield(L, -2, token);
+            } else {
+                // Intermediate token - get or create sub-table
+                lua_getfield(L, -1, token);
+                if (!lua_istable(L, -1)) {
+                    lua_pop(L, 1);
+                    lua_newtable(L);
+                    lua_pushvalue(L, -1);
+                    lua_setfield(L, -3, token);
+                }
+                depth++;
+            }
+
+            token = next_token;
         }
 
-        // Create entry table and set fields
-        lua_newtable(L);
-        lua_pushstring(L, full_path);
-        lua_setfield(L, -2, "path");
-        lua_pushinteger(L, width);
-        lua_setfield(L, -2, "width");
-        lua_pushinteger(L, height);
-        lua_setfield(L, -2, "height");
-        lua_pushinteger(L, ntiles);
-        lua_setfield(L, -2, "ntiles");
-
-        lua_setfield(L, -2, key); // ns_table[key] = entry
-        lua_pop(L, 1);            // pop ns_table
+        // Pop all nested tables to get back to Sprites
+        for (int i = 0; i < depth; i++) {
+            lua_pop(L, 1);
+        }
     }
 
     fclose(f);
