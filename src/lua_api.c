@@ -428,15 +428,27 @@ int lua_map(lua_State *L) {
             lua_pop(L, 1); continue;
         }
 
-        // build tile_ids array from the Lua layer table
-        int *tile_ids = (int *)malloc(tile_count * sizeof(int));
-        if (!tile_ids) { lua_pop(L, 1); continue; }
+         // build tile_ids array from the Lua layer table
+         int *tile_ids = (int *)malloc(tile_count * sizeof(int));
+         if (!tile_ids) { lua_pop(L, 1); continue; }
 
-        for (int i = 0; i < tile_count; i++) {
-            lua_rawgeti(L, 6, i + 1);
-            tile_ids[i] = lua_isnil(L, -1) ? -1 : (int)lua_tonumber(L, -1);
-            lua_pop(L, 1);
-        }
+         // Initialize to -1 (empty tiles)
+         for (int i = 0; i < tile_count; i++) {
+             tile_ids[i] = -1;
+         }
+
+         // Iterate over all key-value pairs in the tileset table
+         lua_pushnil(L);
+         while (lua_next(L, 6) != 0) {
+             // key at -2, value at -1
+             if (lua_type(L, -2) == LUA_TNUMBER) {
+                 int idx = (int)lua_tonumber(L, -2) - 1;  // Convert 1-indexed to 0-indexed
+                 if (idx >= 0 && idx < tile_count) {
+                     tile_ids[idx] = lua_isnil(L, -1) ? -1 : (int)lua_tonumber(L, -1);
+                 }
+             }
+             lua_pop(L, 1);  // Pop value, keep key for next iteration
+         }
 
         MapLayerData data = {
             .path     = path,
