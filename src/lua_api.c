@@ -497,6 +497,28 @@ int lua_set_pallet(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
+// ui.mid(x, y, z) -> number
+// Returns the middle value of three numbers (useful for clamping)
+//----------------------------------------------------------------------------------
+int lua_mid(lua_State *L) {
+    lua_Number x = luaL_checknumber(L, 1);
+    lua_Number y = luaL_checknumber(L, 2);
+    lua_Number z = luaL_checknumber(L, 3);
+
+    lua_Number result;
+    if ((x <= y && y <= z) || (z <= y && y <= x)) {
+        result = y;
+    } else if ((y <= x && x <= z) || (z <= x && x <= y)) {
+        result = x;
+    } else {
+        result = z;
+    }
+
+    lua_pushnumber(L, result);
+    return 1;
+}
+
+//----------------------------------------------------------------------------------
 // Global Lua State Functions
 //----------------------------------------------------------------------------------
 
@@ -678,6 +700,9 @@ void lua_api_init(void) {
 
     lua_pushcfunction(globalLuaState, lua_fillp);
     lua_setfield(globalLuaState, -2, "fillp");
+
+    lua_pushcfunction(globalLuaState, lua_mid);
+    lua_setfield(globalLuaState, -2, "mid");
 
     lua_setglobal(globalLuaState, "ui");
 
