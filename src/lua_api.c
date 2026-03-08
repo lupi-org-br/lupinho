@@ -318,12 +318,51 @@ int lua_fillp(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
+// Helper: Recursively search for a tileset by name in the Sprites table
+// Returns 1 if found (table is on top of stack), 0 otherwise
+//----------------------------------------------------------------------------------
+static int find_tileset_in_sprites(lua_State *L, int sprites_idx, const char *tileset_name) {
+    lua_pushnil(L);
+    while (lua_next(L, sprites_idx) != 0) {
+        if (lua_istable(L, -1)) {
+            // Check if this table has a "path" field (it's a tileset)
+            lua_getfield(L, -1, "path");
+            bool has_path = lua_isstring(L, -1);
+            lua_pop(L, 1);
+
+            if (has_path) {
+                // This is a tileset entry, check the key name
+                lua_pushvalue(L, -2);  // Push the key
+                const char *key = lua_tostring(L, -1);
+                lua_pop(L, 1);
+
+                if (key && strcmp(key, tileset_name) == 0) {
+                    // Found it! Move to top and return success
+                    lua_insert(L, -2);  // Move found table below the key
+                    lua_pop(L, 1);      // Remove the key
+                    return 1;
+                }
+            } else {
+                // This is a subdirectory, recurse into it
+                if (find_tileset_in_sprites(L, lua_gettop(L), tileset_name)) {
+                    lua_insert(L, -3);  // Move result below current key/value
+                    lua_pop(L, 2);      // Pop key and subdirectory table
+                    return 1;
+                }
+            }
+        }
+        lua_pop(L, 1);  // Pop value, keep key for next iteration
+    }
+    return 0;
+}
+
+//----------------------------------------------------------------------------------
 // ui.map(map_data, cam_x, cam_y)
 // map_data is a layer table, e.g. M.map.BG1:
 //   lupi_metadata = { width, height, tile_size }
 //   ["scene_a"]   = { [1]=tile_id, [2]=tile_id, ... }  (sparse, 1-indexed)
-// The tileset key (e.g. "scene_a") is looked up in Sprites.map to get the
-// sprite path and dimensions.
+// The tileset key (e.g. "scene_a") is looked up dynamically anywhere in the
+// Sprites table hierarchy to get the sprite path and dimensions.
 // cam_x/cam_y: screen-space offset where the map is drawn.
 //----------------------------------------------------------------------------------
 int lua_map(lua_State *L) {
@@ -348,45 +387,42 @@ int lua_map(lua_State *L) {
 
     if (map_width <= 0 || map_height <= 0 || tile_size <= 0) return 0;
 
-    // --- get Sprites.map ---
+    // --- get Sprites table for dynamic tileset lookup ---
     lua_getglobal(L, "Sprites");                // [4]
     if (!lua_istable(L, -1)) { lua_pop(L, 1); return 0; }
-
-    lua_getfield(L, 4, "map");                  // [5]
-    if (!lua_istable(L, -1)) { lua_pop(L, 2); return 0; }
 
     int tile_count = map_width * map_height;
 
     // --- iterate tileset keys in map_data ---
-    lua_pushnil(L);                             // [6] first key
+    lua_pushnil(L);                             // [5] first key
     while (lua_next(L, 1) != 0) {
-        // [6]=key (tileset name)  [7]=value ({[pos]=tile_id})
+        // [5]=key (tileset name)  [6]=value ({[pos]=tile_id})
 
-        if (lua_type(L, 6) != LUA_TSTRING || !lua_istable(L, 7)) {
+        if (lua_type(L, 5) != LUA_TSTRING || !lua_istable(L, 6)) {
             lua_pop(L, 1); continue;
         }
 
-        const char *tileset_name = lua_tostring(L, 6);
+        const char *tileset_name = lua_tostring(L, 5);
         if (strcmp(tileset_name, "lupi_metadata") == 0) {
             lua_pop(L, 1); continue;
         }
 
-        // resolve sprite via Sprites.map[tileset_name]
-        lua_getfield(L, 5, tileset_name);       // [8]
-        if (!lua_istable(L, -1)) {
-            lua_pop(L, 2); continue;
+        // resolve sprite via dynamic lookup in Sprites
+        if (!find_tileset_in_sprites(L, 4, tileset_name)) {
+            lua_pop(L, 1); continue;
         }
+        // [7] = tileset table
 
-        lua_getfield(L, 8, "path");
+        lua_getfield(L, 7, "path");
         const char *path = lua_tostring(L, -1); lua_pop(L, 1);
 
-        lua_getfield(L, 8, "width");
+        lua_getfield(L, 7, "width");
         int tile_w = (int)lua_tonumber(L, -1);  lua_pop(L, 1);
 
-        lua_getfield(L, 8, "height");
+        lua_getfield(L, 7, "height");
         int tile_h = (int)lua_tonumber(L, -1);  lua_pop(L, 1);
 
-        lua_pop(L, 1); // pop Sprites.map[tileset_name] [8]
+        lua_pop(L, 1); // pop tileset table [7]
 
         if (!path || tile_w <= 0 || tile_h <= 0) {
             lua_pop(L, 1); continue;
@@ -397,7 +433,7 @@ int lua_map(lua_State *L) {
         if (!tile_ids) { lua_pop(L, 1); continue; }
 
         for (int i = 0; i < tile_count; i++) {
-            lua_rawgeti(L, 7, i + 1);
+            lua_rawgeti(L, 6, i + 1);
             tile_ids[i] = lua_isnil(L, -1) ? -1 : (int)lua_tonumber(L, -1);
             lua_pop(L, 1);
         }
@@ -413,10 +449,10 @@ int lua_map(lua_State *L) {
         draw_map_layer(&data, map_width, tile_size, cam_x, cam_y);
         free(tile_ids);
 
-        lua_pop(L, 1); // pop value [7], keep key for next iteration
+        lua_pop(L, 1); // pop value [6], keep key for next iteration
     }
 
-    lua_pop(L, 2); // pop Sprites.map [5] and Sprites [4]
+    lua_pop(L, 1); // pop Sprites [4]
     return 0;
 }
 
