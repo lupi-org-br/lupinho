@@ -26,7 +26,7 @@ void UpdateDrawFrame() {
     draw_frame_buffer();
 
     #ifndef PRODUCTION
-    DrawFPS(10, 10); // DEBUG
+    // DrawFPS(10, 10); // DEBUG
     #endif
 
     EndDrawing();
