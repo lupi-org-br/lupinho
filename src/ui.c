@@ -474,8 +474,8 @@ void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x,
 
         int col = map_idx % map_width;
         int row = map_idx / map_width;
-        int sx  = col * tile_size + cam_x;
-        int sy  = row * tile_size + cam_y;
+        int sx  = col * tile_size + cam_x - camera_x;
+        int sy  = row * tile_size + cam_y - camera_y;
 
         uint8_t *tile_data = file_buf + offset;
         for (int ty = 0; ty < data->tile_h; ty++) {
