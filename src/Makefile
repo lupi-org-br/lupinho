@@ -1,6 +1,9 @@
 # Emscripten Compiler
 CC = emcc
 
+# Native Compiler (Linux)
+CC_NATIVE = gcc
+
 # Source Files
 SRC = main.c ui.c lua_api.c
 
@@ -15,6 +18,9 @@ RAYLIB_LIB = libs/raylib-web/libraylib.web.a
 # Lua Configuration
 LUA_WEB_INCLUDE = -Ilibs/lua-web
 LUA_WEB_LIB = libs/lua-web/liblua.web.a
+
+# Native (Linux) Libraries
+NATIVE_LIBS = -lraylib -llua -lm -ldl -lpthread -lX11
 
 # Compilation Flags
 CFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces
@@ -47,9 +53,13 @@ web: $(SRC)
 production: $(SRC)
 	$(CC) $(SRC) -o $(OUTPUT) $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(PROD_FLAGS) $(LUA_WEB_LIB) $(RAYLIB_LIB)
 
+# Linux Target (native desktop)
+linux: $(SRC)
+	$(CC_NATIVE) $(SRC) -o ../dist/lupinho $(RAYLIB_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION) $(DEBUG_FLAGS)
+
 # Clean generated files
 clean:
-	rm -f $(OUTPUT) game.js game.wasm lupi_emulator
+	rm -f $(OUTPUT) game.js game.wasm lupi_emulator ../dist/lupinho
 
 # Help
 help:
@@ -59,9 +69,10 @@ help:
 	@echo "Targets:"
 	@echo "  make web         - Build for WebAssembly (development mode with debug)"
 	@echo "  make production  - Build for WebAssembly (optimized, no debug)"
+	@echo "  make linux       - Build for Linux desktop (native executable)"
 	@echo "  make clean       - Remove generated files"
 	@echo ""
 	@echo "Note: For WebAssembly builds, Lua must be compiled with Emscripten."
 	@echo "      If you get linking errors, you may need to compile Lua with emcc."
 
-.PHONY: web production native clean help
+.PHONY: web production linux native clean help
