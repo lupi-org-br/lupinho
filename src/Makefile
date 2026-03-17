@@ -27,6 +27,11 @@ LUA_55_LIB = libs/linux/lua-5.5.0/src/liblua.a
 NATIVE_LIBS = -lraylib $(LUA_55_LIB) -lm -ldl -lpthread -lX11 -larchive
 NATIVE_INCLUDE = $(LUA_55_INCLUDE)
 
+# Native (Linux) Static Libraries
+RAYLIB_LINUX_STATIC = libs/linux/raylib/src/libraylib.a
+STATIC_LIBS = $(RAYLIB_LINUX_STATIC) $(LUA_55_LIB)
+STATIC_LIBS_FLAGS = -Wl,-Bstatic $(RAYLIB_LINUX_STATIC) $(LUA_55_LIB) -Wl,-Bdynamic -lm -ldl -lpthread -lX11 -larchive
+
 # Native (Linux) Source Files
 SRC_NATIVE = main.c ui.c lua_api.c zip.c
 
@@ -65,9 +70,14 @@ production: $(SRC)
 linux: $(SRC_NATIVE)
 	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho $(NATIVE_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION) $(DEBUG_FLAGS)
 
+# Linux Static Target (portable binary with static raylib)
+# Note: Still requires libarchive.so.13 on target system
+static: $(SRC_NATIVE) $(RAYLIB_LINUX_STATIC)
+	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho-static $(NATIVE_INCLUDE) $(CFLAGS) $(STATIC_LIBS_FLAGS) $(OPTIMIZATION) $(DEBUG_FLAGS) -s
+
 # Clean generated files
 clean:
-	rm -f $(OUTPUT) game.js game.wasm lupi_emulator ../dist/lupinho
+	rm -f $(OUTPUT) game.js game.wasm lupi_emulator ../dist/lupinho ../dist/lupinho-static
 
 # Help
 help:
@@ -77,10 +87,16 @@ help:
 	@echo "Targets:"
 	@echo "  make web         - Build for WebAssembly (development mode with debug)"
 	@echo "  make production  - Build for WebAssembly (optimized, no debug)"
-	@echo "  make linux       - Build for Linux desktop (native executable)"
+	@echo "  make linux       - Build for Linux desktop (requires raylib, libarchive)"
+	@echo "  make static      - Build portable Linux binary (static raylib + Lua)"
 	@echo "  make clean       - Remove generated files"
+	@echo ""
+	@echo "Dependencies:"
+	@echo "  make web         - Emscripten SDK"
+	@echo "  make linux       - pacman: raylib libarchive"
+	@echo "  make static      - pacman: libarchive (raylib statically linked)"
 	@echo ""
 	@echo "Note: For WebAssembly builds, Lua must be compiled with Emscripten."
 	@echo "      If you get linking errors, you may need to compile Lua with emcc."
 
-.PHONY: web production linux native clean help
+.PHONY: web production linux static clean help
