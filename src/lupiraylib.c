@@ -5,6 +5,7 @@
 #include "raylib.h"
 #include "ui.h"
 #include "lua_api.h"
+#include "input_backend.h"
 
 #if !defined(PLATFORM_WEB)
 #include "zip.h"
@@ -26,6 +27,7 @@ void UpdateDrawFrame() {
 #if defined(PLATFORM_WEB)
     if (game_is_loading) return;
 #endif
+    input_poll();
     lua_api_call_update();
 
     BeginDrawing();
@@ -78,6 +80,7 @@ static int ends_with(const char *str, const char *suffix) {
 #if defined(PLATFORM_WEB)
 int main() {
     lua_api_init();
+    input_init();
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lupi Emulator");
     SetTargetFPS(60);
@@ -128,8 +131,9 @@ int main(int argc, char *argv[]) {
         game_dir = argv[1];
     }
 
-    // Initialize Lua
+    // Initialize Lua and input
     lua_api_init();
+    input_init();
 
     // Set up the game
     lua_api_setup_game(game_dir);

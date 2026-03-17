@@ -33,7 +33,12 @@ STATIC_LIBS = $(RAYLIB_LINUX_STATIC) $(LUA_55_LIB)
 STATIC_LIBS_FLAGS = -Wl,-Bstatic $(RAYLIB_LINUX_STATIC) $(LUA_55_LIB) -Wl,-Bdynamic -lm -ldl -lpthread -lX11 -larchive
 
 # Native (Linux) Source Files
-SRC_NATIVE = main.c ui.c lua_api.c zip.c
+SRC_NATIVE = lupiraylib.c ui.c lua_api.c zip.c input_raylib.c
+
+# Libretro Source Files
+LIBRETRO_CORE_SRC = libretro_core.c libretro_video.c lupilibretro.c ui.c lua_api.c zip.c input_libretro.c
+LIBRETRO_OUTPUT = ../dist/lupinho_libretro.so
+LIBRETRO_INCLUDE = -I.
 
 # Compilation Flags
 CFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces
@@ -70,6 +75,10 @@ production: $(SRC)
 linux: $(SRC_NATIVE)
 	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho $(NATIVE_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION) $(DEBUG_FLAGS)
 
+# Libretro Linux Target
+libretro-linux: $(LIBRETRO_CORE_SRC)
+	$(CC_NATIVE) $(LIBRETRO_CORE_SRC) -o $(LIBRETRO_OUTPUT) $(NATIVE_INCLUDE) $(LIBRETRO_INCLUDE) $(CFLAGS) -fPIC -shared -DLIBRETRO $(LUA_55_LIB) -lm -ldl -lpthread -larchive
+
 # Linux Static Target (portable binary with static raylib)
 # Note: Still requires libarchive.so.13 on target system
 static: $(SRC_NATIVE) $(RAYLIB_LINUX_STATIC)
@@ -77,7 +86,7 @@ static: $(SRC_NATIVE) $(RAYLIB_LINUX_STATIC)
 
 # Clean generated files
 clean:
-	rm -f $(OUTPUT) game.js game.wasm lupi_emulator ../dist/lupinho ../dist/lupinho-static
+	rm -f $(OUTPUT) game.js game.wasm lupi_emulator ../dist/lupinho ../dist/lupinho-static ../dist/lupinho_libretro.so
 
 # Help
 help:
@@ -85,18 +94,20 @@ help:
 	@echo "======================"
 	@echo ""
 	@echo "Targets:"
-	@echo "  make web         - Build for WebAssembly (development mode with debug)"
-	@echo "  make production  - Build for WebAssembly (optimized, no debug)"
-	@echo "  make linux       - Build for Linux desktop (requires raylib, libarchive)"
-	@echo "  make static      - Build portable Linux binary (static raylib + Lua)"
-	@echo "  make clean       - Remove generated files"
+	@echo "  make web            - Build for WebAssembly (development mode with debug)"
+	@echo "  make production     - Build for WebAssembly (optimized, no debug)"
+	@echo "  make linux          - Build for Linux desktop (requires raylib, libarchive)"
+	@echo "  make static         - Build portable Linux binary (static raylib + Lua)"
+	@echo "  make libretro-linux - Build libretro core for Linux"
+	@echo "  make clean          - Remove generated files"
 	@echo ""
 	@echo "Dependencies:"
-	@echo "  make web         - Emscripten SDK"
-	@echo "  make linux       - pacman: raylib libarchive"
-	@echo "  make static      - pacman: libarchive (raylib statically linked)"
+	@echo "  make web            - Emscripten SDK"
+	@echo "  make linux          - pacman: raylib libarchive"
+	@echo "  make static         - pacman: libarchive (raylib statically linked)"
+	@echo "  make libretro-linux - pacman: libarchive"
 	@echo ""
 	@echo "Note: For WebAssembly builds, Lua must be compiled with Emscripten."
 	@echo "      If you get linking errors, you may need to compile Lua with emcc."
 
-.PHONY: web production linux static clean help
+.PHONY: web production linux static libretro-linux clean help

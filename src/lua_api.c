@@ -5,7 +5,7 @@
 
 #include "lua_api.h"
 #include "ui.h"
-#include "raylib.h"
+#include "input_backend.h"
 
 lua_State *globalLuaState = NULL;
 
@@ -220,65 +220,32 @@ int lua_spr(lua_State *L) {
 //----------------------------------------------------------------------------------
 // Helper function to get the keyboard key corresponding to a gamepad button
 //----------------------------------------------------------------------------------
-static int get_keyboard_key_for_button(int button) {
+static input_button_t map_button(int button) {
     switch (button) {
-        // D-pad / Arrow keys
-        case GAMEPAD_BUTTON_LEFT_FACE_UP:    return KEY_UP;
-        case GAMEPAD_BUTTON_LEFT_FACE_DOWN:  return KEY_DOWN;
-        case GAMEPAD_BUTTON_LEFT_FACE_LEFT:  return KEY_LEFT;
-        case GAMEPAD_BUTTON_LEFT_FACE_RIGHT: return KEY_RIGHT;
-        // Action buttons
-        case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: return KEY_Z;  // BTN_Z
-        case GAMEPAD_BUTTON_RIGHT_FACE_DOWN:  return KEY_Z;  // BTN_Z (alternative)
-        case GAMEPAD_BUTTON_RIGHT_FACE_UP:    return KEY_X;  // BTN_Q
-        case GAMEPAD_BUTTON_RIGHT_FACE_LEFT:  return KEY_A;  // BTN_E
-        case GAMEPAD_BUTTON_LEFT_TRIGGER_1:   return KEY_Q;  // BTN_F
-        case GAMEPAD_BUTTON_RIGHT_TRIGGER_1:  return KEY_W;  // BTN_G
-        default: return -1;
+        case INPUT_BUP:    return INPUT_BUP;
+        case INPUT_BDOWN:  return INPUT_BDOWN;
+        case INPUT_BLEFT:  return INPUT_BLEFT;
+        case INPUT_BRIGHT: return INPUT_BRIGHT;
+        case INPUT_BA:     return INPUT_BA;
+        case INPUT_BB:     return INPUT_BB;
+        case INPUT_BX:     return INPUT_BX;
+        case INPUT_BL:     return INPUT_BL;
+        case INPUT_BR:     return INPUT_BR;
+        default:           return INPUT_BA;
     }
 }
 
-//----------------------------------------------------------------------------------
-// ui.btn(button:number, pad:number) -> bool
-// Checks both gamepad and keyboard input
-//----------------------------------------------------------------------------------
 int lua_btn(lua_State *L) {
     int button = (int)luaL_checknumber(L, 1);
-    int pad = (int)luaL_optnumber(L, 2, 0);
-
-    bool is_down = IsGamepadButtonDown(pad, button);
-
-    if (!is_down) {
-        int key = get_keyboard_key_for_button(button);
-        if (key != -1) {
-            is_down = IsKeyDown(key);
-        }
-    }
-
-    lua_pushboolean(L, is_down);
-
+    input_button_t mapped = map_button(button);
+    lua_pushboolean(L, input_btn_down(mapped));
     return 1;
 }
 
-//----------------------------------------------------------------------------------
-// ui.btnp(button:number, pad:number) -> bool
-// Checks both gamepad and keyboard input (pressed this frame)
-//----------------------------------------------------------------------------------
 int lua_btnp(lua_State *L) {
     int button = (int)luaL_checknumber(L, 1);
-    int pad = (int)luaL_optnumber(L, 2, 0);
-
-    bool is_pressed = IsGamepadButtonPressed(pad, button);
-
-    if (!is_pressed) {
-        int key = get_keyboard_key_for_button(button);
-        if (key != -1) {
-            is_pressed = IsKeyPressed(key);
-        }
-    }
-
-    lua_pushboolean(L, is_pressed);
-
+    input_button_t mapped = map_button(button);
+    lua_pushboolean(L, input_btn_pressed(mapped));
     return 1;
 }
 
@@ -297,7 +264,7 @@ int lua_cls(lua_State *L) {
 // ui.log(message:string)
 //----------------------------------------------------------------------------------
 int lua_log(lua_State *L) {
-    char *message = luaL_checkstring(L, 1);
+    const char *message = luaL_checkstring(L, 1);
     printf("[LUPINHO] %s\n", message);
     return 0;
 }
@@ -754,34 +721,31 @@ void lua_api_init(void) {
 
     lua_setglobal(globalLuaState, "ui");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_RIGHT);
+    lua_pushinteger(globalLuaState, INPUT_BRIGHT);
     lua_setglobal(globalLuaState, "RIGHT");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_LEFT);
+    lua_pushinteger(globalLuaState, INPUT_BLEFT);
     lua_setglobal(globalLuaState, "LEFT");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_UP);
+    lua_pushinteger(globalLuaState, INPUT_BUP);
     lua_setglobal(globalLuaState, "UP");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_FACE_DOWN);
+    lua_pushinteger(globalLuaState, INPUT_BDOWN);
     lua_setglobal(globalLuaState, "DOWN");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT);
+    lua_pushinteger(globalLuaState, INPUT_BA);
     lua_setglobal(globalLuaState, "BTN_Z");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_LEFT);
+    lua_pushinteger(globalLuaState, INPUT_BX);
     lua_setglobal(globalLuaState, "BTN_E");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_UP);
+    lua_pushinteger(globalLuaState, INPUT_BB);
     lua_setglobal(globalLuaState, "BTN_Q");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
-    lua_setglobal(globalLuaState, "BTN_Z");
-
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_LEFT_TRIGGER_1);
+    lua_pushinteger(globalLuaState, INPUT_BL);
     lua_setglobal(globalLuaState, "BTN_F");
 
-    lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_TRIGGER_1);
+    lua_pushinteger(globalLuaState, INPUT_BR);
     lua_setglobal(globalLuaState, "BTN_G");
 }
 
