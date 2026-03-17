@@ -796,7 +796,7 @@ void lua_api_setup_game(const char *game_dir) {
     lua_getfield(globalLuaState, -1, "path");
     const char *current_path = lua_tostring(globalLuaState, -1);
     lua_pop(globalLuaState, 1);
-    lua_pushfstring(globalLuaState, "%s;./%s/?.lua", current_path, game_dir);
+    lua_pushfstring(globalLuaState, "%s;%s/?.lua", current_path, game_dir);
     lua_setfield(globalLuaState, -2, "path");
 
     lua_getfield(globalLuaState, -1, "preload");

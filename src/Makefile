@@ -11,16 +11,24 @@ SRC = main.c ui.c lua_api.c
 OUTPUT = ../dist/game.html
 
 # Raylib Directories
-RAYLIB_SRC = libs/raylib-web
-RAYLIB_INCLUDE = -Ilibs/raylib-web
-RAYLIB_LIB = libs/raylib-web/libraylib.web.a
+RAYLIB_SRC = libs/web/raylib-web
+RAYLIB_INCLUDE = -Ilibs/web/raylib-web
+RAYLIB_LIB = libs/web/raylib-web/libraylib.web.a
 
 # Lua Configuration
-LUA_WEB_INCLUDE = -Ilibs/lua-web
-LUA_WEB_LIB = libs/lua-web/liblua.web.a
+LUA_WEB_INCLUDE = -Ilibs/web/lua-web
+LUA_WEB_LIB = libs/web/lua-web/liblua.web.a
+
+# Lua 5.5.0 (compiled with binary literal support)
+LUA_55_INCLUDE = -Ilibs/linux/lua-5.5.0/src
+LUA_55_LIB = libs/linux/lua-5.5.0/src/liblua.a
 
 # Native (Linux) Libraries
-NATIVE_LIBS = -lraylib -llua -lm -ldl -lpthread -lX11
+NATIVE_LIBS = -lraylib $(LUA_55_LIB) -lm -ldl -lpthread -lX11 -larchive
+NATIVE_INCLUDE = $(LUA_55_INCLUDE)
+
+# Native (Linux) Source Files
+SRC_NATIVE = main.c ui.c lua_api.c zip.c
 
 # Compilation Flags
 CFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces
@@ -31,7 +39,7 @@ EMFLAGS = -s USE_GLFW=3
 EMFLAGS += -s TOTAL_MEMORY=67108864
 EMFLAGS += -s STACK_SIZE=1048576
 EMFLAGS += -s FORCE_FILESYSTEM=1
-EMFLAGS += --shell-file libs/raylib-web/minshell.html
+EMFLAGS += --shell-file libs/web/raylib-web/minshell.html
 EMFLAGS += -DPLATFORM_WEB
 
 EMFLAGS += -s EXPORTED_FUNCTIONS='["_main", "_lupi_load_game", "_malloc", "_free"]'
@@ -54,8 +62,8 @@ production: $(SRC)
 	$(CC) $(SRC) -o $(OUTPUT) $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(PROD_FLAGS) $(LUA_WEB_LIB) $(RAYLIB_LIB)
 
 # Linux Target (native desktop)
-linux: $(SRC)
-	$(CC_NATIVE) $(SRC) -o ../dist/lupinho $(RAYLIB_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION) $(DEBUG_FLAGS)
+linux: $(SRC_NATIVE)
+	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho $(NATIVE_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION) $(DEBUG_FLAGS)
 
 # Clean generated files
 clean:
