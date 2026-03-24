@@ -60,8 +60,8 @@ bool should_draw_pixel_with_pattern(int x, int y) {
     return (fill_pattern[row] & (1 << (7 - col))) != 0;
 }
 
-void fb_set(int x, int y, int color) {
-    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT || !should_draw_pixel_with_pattern(x, y)) return;
+void fb_set(int x, int y, int color, bool check_pattern) {
+    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT || (check_pattern && !should_draw_pixel_with_pattern(x, y))) return;
     if (clip_enabled) {
         if (x < clip_x || x >= clip_x + clip_w ||
             y < clip_y || y >= clip_y + clip_h) return;
@@ -89,7 +89,7 @@ void draw_line(LineItem *line) {
     int y = y1;
 
     while(1) {
-        fb_set(x, y, line->color_index);
+        fb_set(x, y, line->color_index, true);
 
         if(x == x2 && y == y2) break;
 
@@ -111,18 +111,18 @@ void draw_rect(RectItem *rect) {
     if(rect->filled) {
         for (int py = ry; py < ry + rh; py++) {
             for (int px = rx; px < rx + rw; px++) {
-                fb_set(px, py, rect->color_index);
+                fb_set(px, py, rect->color_index, true);
             }
         }
     } else {
         // Top line
-        for (int px = rx; px < rx + rw; px++) fb_set(px, ry, rect->color_index);
+        for (int px = rx; px < rx + rw; px++) fb_set(px, ry, rect->color_index, true);
         // Bottom line
-        for (int px = rx; px < rx + rw; px++) fb_set(px, ry + rh - 1, rect->color_index);
+        for (int px = rx; px < rx + rw; px++) fb_set(px, ry + rh - 1, rect->color_index, true);
         // Left line
-        for (int py = ry; py < ry + rh; py++) fb_set(rx, py, rect->color_index);
+        for (int py = ry; py < ry + rh; py++) fb_set(rx, py, rect->color_index, true);
         // Right line
-        for (int py = ry; py < ry + rh; py++) fb_set(rx + rw - 1, py, rect->color_index);
+        for (int py = ry; py < ry + rh; py++) fb_set(rx + rw - 1, py, rect->color_index, true);
     }
 }
 
@@ -130,14 +130,14 @@ void draw_rect(RectItem *rect) {
 // Circle Functions
 //----------------------------------------------------------------------------------
 void draw_circle_pixels(int cx, int cy, int x, int y, int color_index) {
-    fb_set(cx + x, cy + y, color_index);
-    fb_set(cx - x, cy + y, color_index);
-    fb_set(cx + x, cy - y, color_index);
-    fb_set(cx - x, cy - y, color_index);
-    fb_set(cx + y, cy + x, color_index);
-    fb_set(cx - y, cy + x, color_index);
-    fb_set(cx + y, cy - x, color_index);
-    fb_set(cx - y, cy - x, color_index);
+    fb_set(cx + x, cy + y, color_index, true);
+    fb_set(cx - x, cy + y, color_index, true);
+    fb_set(cx + x, cy - y, color_index, true);
+    fb_set(cx - x, cy - y, color_index, true);
+    fb_set(cx + y, cy + x, color_index, true);
+    fb_set(cx - y, cy + x, color_index, true);
+    fb_set(cx + y, cy - x, color_index, true);
+    fb_set(cx - y, cy - x, color_index, true);
 }
 
 void draw_circle(CircleItem *circle) {
@@ -151,7 +151,7 @@ void draw_circle(CircleItem *circle) {
                 int dx = px - cx;
                 int dy = py - cy;
                 if (dx * dx + dy * dy <= radius_squared) {
-                    fb_set(px, py, circle->color_index);
+                    fb_set(px, py, circle->color_index, true);
                 }
             }
         }
@@ -182,7 +182,7 @@ void draw_circle(CircleItem *circle) {
 //----------------------------------------------------------------------------------
 void draw_horizontal_line_fb(int x1, int x2, int y, int color_index) {
     if (x1 > x2) { int tmp = x1; x1 = x2; x2 = tmp; }
-    for (int x = x1; x <= x2; x++) fb_set(x, y, color_index);
+    for (int x = x1; x <= x2; x++) fb_set(x, y, color_index, true);
 }
 
 void draw_triangle(TriangleItem *triangle) {
@@ -283,7 +283,7 @@ void draw_print(const char *text, int x, int y, int color_index) {
         for (int col = 0; col < FONT_CHAR_WIDTH; col++) {
             for (int row = 0; row < FONT_CHAR_HEIGHT; row++) {
                 if (glyph[col] & (1 << row))
-                    fb_set(cursor_x + col, base_y + row, color_index);
+                    fb_set(cursor_x + col, base_y + row, color_index, true);
             }
         }
 
@@ -360,7 +360,7 @@ void draw_tile(const char *path, int width, int height, int tile_index, int x, i
             if (idx == 0) continue;
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
-            fb_set(px, py, idx);
+            fb_set(px, py, idx, true);
         }
     }
 
@@ -393,7 +393,7 @@ void draw_spr(const char *path, int width, int height, int x, int y, bool flippe
             if (idx == 0) continue;
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
-            fb_set(px, py, idx);
+            fb_set(px, py, idx, true);
         }
     }
 
@@ -464,7 +464,7 @@ void draw_map_layer(MapLayerData *data, int map_width, int tile_size, int cam_x,
                 if (idx == 0) continue;
                 int px = flip_x ? (sx + data->tile_w - 1 - tx) : (sx + tx);
                 int py = flip_y ? (sy + data->tile_h - 1 - ty) : (sy + ty);
-                fb_set(px, py, idx);
+                fb_set(px, py, idx, false);
             }
         }
     }
