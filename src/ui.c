@@ -283,7 +283,7 @@ void draw_print(const char *text, int x, int y, int color_index) {
         for (int col = 0; col < FONT_CHAR_WIDTH; col++) {
             for (int row = 0; row < FONT_CHAR_HEIGHT; row++) {
                 if (glyph[col] & (1 << row))
-                    fb_set(cursor_x + col, base_y + row, color_index, true);
+                    fb_set(cursor_x + col, base_y + row, color_index, false);
             }
         }
 
@@ -360,7 +360,7 @@ void draw_tile(const char *path, int width, int height, int tile_index, int x, i
             if (idx == 0) continue;
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
-            fb_set(px, py, idx, true);
+            fb_set(px, py, idx, false);
         }
     }
 
@@ -393,7 +393,7 @@ void draw_spr(const char *path, int width, int height, int x, int y, bool flippe
             if (idx == 0) continue;
             int px = flipped ? (x + width - 1 - col) : (x + col);
             int py = y + row;
-            fb_set(px, py, idx, true);
+            fb_set(px, py, idx, false);
         }
     }
 
