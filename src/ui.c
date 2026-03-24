@@ -44,19 +44,10 @@ void reset_clip(void) { clip_enabled = false; }
 // Frame buffer pixel write — enforces bounds and clip region.
 // All drawing functions must use this instead of writing frame_buffer directly.
 //----------------------------------------------------------------------------------
-void fb_set(int x, int y, int color) {
-    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return;
-    if (clip_enabled) {
-        if (x < clip_x || x >= clip_x + clip_w ||
-            y < clip_y || y >= clip_y + clip_h) return;
-    }
-    frame_buffer[y][x] = (uint8_t)color;
-}
-
-bool should_draw_pixel_with_pattern(int x, int y, uint8_t pattern[8]) {
+bool should_draw_pixel_with_pattern(int x, int y) {
     bool is_solid = true;
     for (int i = 0; i < 8; i++) {
-        if (pattern[i] != 0) {
+        if (fill_pattern[i] != 0) {
             is_solid = false;
             break;
         }
@@ -66,7 +57,16 @@ bool should_draw_pixel_with_pattern(int x, int y, uint8_t pattern[8]) {
     int row = y & 7;
     int col = x & 7;
 
-    return (pattern[row] & (1 << (7 - col))) != 0;
+    return (fill_pattern[row] & (1 << (7 - col))) != 0;
+}
+
+void fb_set(int x, int y, int color) {
+    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT || !should_draw_pixel_with_pattern(x, y)) return;
+    if (clip_enabled) {
+        if (x < clip_x || x >= clip_x + clip_w ||
+            y < clip_y || y >= clip_y + clip_h) return;
+    }
+    frame_buffer[y][x] = (uint8_t)color;
 }
 
 //----------------------------------------------------------------------------------
@@ -109,19 +109,9 @@ void draw_rect(RectItem *rect) {
     int rh = rect->height;
 
     if(rect->filled) {
-        bool has_pattern = false;
-        for (int i = 0; i < 8; i++) {
-            if (fill_pattern[i] != 0) { has_pattern = true; break; }
-        }
-
         for (int py = ry; py < ry + rh; py++) {
             for (int px = rx; px < rx + rw; px++) {
-                if (has_pattern) {
-                    if (should_draw_pixel_with_pattern(px, py, fill_pattern))
-                        fb_set(px, py, rect->color_index);
-                } else {
-                    fb_set(px, py, rect->color_index);
-                }
+                fb_set(px, py, rect->color_index);
             }
         }
     } else {
@@ -155,23 +145,13 @@ void draw_circle(CircleItem *circle) {
     int cy = circle->center_y - camera_y;
 
     if(circle->filled) {
-        bool has_pattern = false;
-        for (int i = 0; i < 8; i++) {
-            if (fill_pattern[i] != 0) { has_pattern = true; break; }
-        }
-
         int radius_squared = circle->radius * circle->radius;
         for (int py = cy - circle->radius; py <= cy + circle->radius; py++) {
             for (int px = cx - circle->radius; px <= cx + circle->radius; px++) {
                 int dx = px - cx;
                 int dy = py - cy;
                 if (dx * dx + dy * dy <= radius_squared) {
-                    if (has_pattern) {
-                        if (should_draw_pixel_with_pattern(px, py, fill_pattern))
-                            fb_set(px, py, circle->color_index);
-                    } else {
-                        fb_set(px, py, circle->color_index);
-                    }
+                    fb_set(px, py, circle->color_index);
                 }
             }
         }
