@@ -79,6 +79,10 @@ static int ends_with(const char *str, const char *suffix) {
 int main() {
     lua_api_init();
 
+#if defined(AUTO_LOAD_GAME)
+    lua_api_setup_game("/loaded_game");
+#endif
+
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lupi Emulator");
     SetTargetFPS(60);
 

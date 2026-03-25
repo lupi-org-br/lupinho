@@ -66,6 +66,18 @@ web: $(SRC)
 production: $(SRC)
 	$(CC) $(SRC) -o $(OUTPUT) $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(PROD_FLAGS) $(LUA_WEB_LIB) $(RAYLIB_LIB)
 
+# Web Game Target (embed .lupi file)
+web-game: $(SRC)
+	@if [ -z "$(GAME_PATH)" ]; then echo "Error: GAME_PATH is required. Usage: make web-game GAME_PATH=game.lupi"; exit 1; fi
+	@echo "Extracting $(GAME_PATH)..."
+	@rm -rf /tmp/lupi-web-game
+	@mkdir -p /tmp/lupi-web-game
+	@unzip -q "$(GAME_PATH)" -d /tmp/lupi-web-game -x "*.git*" "*.lupi"
+	@echo "Building with embedded game..."
+	@mkdir -p ../dist-game
+	$(CC) $(SRC) -o ../dist-game/game.html $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(OPTIMIZATION) $(DEBUG_FLAGS) -DAUTO_LOAD_GAME $(LUA_WEB_LIB) $(RAYLIB_LIB) --preload-file /tmp/lupi-web-game@/loaded_game
+	@echo "Build complete! Output in ../dist-game/"
+
 # Linux Target (native desktop)
 linux: $(SRC_NATIVE)
 	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho $(NATIVE_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION) $(DEBUG_FLAGS)
@@ -77,6 +89,7 @@ static: $(SRC_NATIVE) $(RAYLIB_LINUX_STATIC)
 
 # Clean generated files
 clean:
+	rm -rf ../dist-game/
 	rm -f $(OUTPUT) game.js game.wasm lupi_emulator ../dist/lupinho ../dist/lupinho-static
 
 # Help
@@ -87,6 +100,7 @@ help:
 	@echo "Targets:"
 	@echo "  make web         - Build for WebAssembly (development mode with debug)"
 	@echo "  make production  - Build for WebAssembly (optimized, no debug)"
+	@echo "  make web-game GAME_PATH=game.lupi - Build for Web with embedded .lupi game"
 	@echo "  make linux       - Build for Linux desktop (requires raylib, libarchive)"
 	@echo "  make static      - Build portable Linux binary (static raylib + Lua)"
 	@echo "  make clean       - Remove generated files"
