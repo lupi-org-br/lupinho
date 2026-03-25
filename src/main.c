@@ -30,7 +30,7 @@ void UpdateDrawFrame() {
 
     BeginDrawing();
 
-    ClearBackground(RAYWHITE);
+    ClearBackground(BLACK);
 
     draw_frame_buffer();
 
