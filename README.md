@@ -4,6 +4,8 @@
 
 ### 🕹️ [Try the Demo](https://lupinho.juneira.com/)
 
+> The demo game is **"balão-gatinho"**. Use the **arrow keys** to move and **Z** as the action button.
+
 ## ✨ Features
 
 - 🌐 **Browser-based** — Runs on WebAssembly, no installation required
@@ -189,6 +191,12 @@ end
 ```bash
 make clean
 ```
+
+## 🤝 Contributing
+
+We encourage contributions! However, **please open an issue before submitting a PR** so we can discuss the changes. Issues can be written in **Portuguese, Spanish, or English**.
+
+We don't have an official communication channel yet, but this README will be updated once we create one.
 
 ## 📝 License
 
