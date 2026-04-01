@@ -222,11 +222,11 @@ int lua_spr(lua_State *L) {
 //----------------------------------------------------------------------------------
 static int get_keyboard_key_for_button(int button) {
     switch (button) {
-        // D-pad / Arrow keys
-        case GAMEPAD_BUTTON_LEFT_FACE_UP:    return KEY_UP;
-        case GAMEPAD_BUTTON_LEFT_FACE_DOWN:  return KEY_DOWN;
-        case GAMEPAD_BUTTON_LEFT_FACE_LEFT:  return KEY_LEFT;
-        case GAMEPAD_BUTTON_LEFT_FACE_RIGHT: return KEY_RIGHT;
+        // D-pad / AWSD keys
+        case GAMEPAD_BUTTON_LEFT_FACE_UP:    return KEY_W;
+        case GAMEPAD_BUTTON_LEFT_FACE_DOWN:  return KEY_S;
+        case GAMEPAD_BUTTON_LEFT_FACE_LEFT:  return KEY_A;
+        case GAMEPAD_BUTTON_LEFT_FACE_RIGHT: return KEY_D;
         // Action buttons
         case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: return KEY_Z;  // BTN_Z
         case GAMEPAD_BUTTON_RIGHT_FACE_DOWN:  return KEY_Z;  // BTN_Z (alternative)
