@@ -60,7 +60,7 @@ PROD_FLAGS = -O3 -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s ELIMINATE_DU
 
 # Web Target (development with debug)
 web: $(SRC)
-	$(CC) $(SRC) -o $(OUTPUT) $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(OPTIMIZATION) $(DEBUG_FLAGS) $(LUA_WEB_LIB) $(RAYLIB_LIB)
+	$(CC) $(SRC) -o $(OUTPUT) $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(OPTIMIZATION) $(LUA_WEB_LIB) $(RAYLIB_LIB)
 
 # Production Target (optimized, no debug)
 production: $(SRC)
@@ -75,17 +75,17 @@ web-game: $(SRC)
 	@unzip -q "$(GAME_PATH)" -d /tmp/lupi-web-game -x "*.git*" "*.lupi"
 	@echo "Building with embedded game..."
 	@mkdir -p ../dist/webgame
-	$(CC) $(SRC) -o ../dist/webgame/game.html $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(OPTIMIZATION) $(DEBUG_FLAGS) -DAUTO_LOAD_GAME $(LUA_WEB_LIB) $(RAYLIB_LIB) --preload-file /tmp/lupi-web-game@/loaded_game
+	$(CC) $(SRC) -o ../dist/webgame/game.html $(RAYLIB_INCLUDE) $(LUA_WEB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(OPTIMIZATION) -DAUTO_LOAD_GAME $(LUA_WEB_LIB) $(RAYLIB_LIB) --preload-file /tmp/lupi-web-game@/loaded_game
 	@echo "Build complete! Output in ../dist/webgame/"
 
 # Linux Target (native desktop)
 linux: $(SRC_NATIVE)
-	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho $(NATIVE_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION) $(DEBUG_FLAGS)
+	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho $(NATIVE_INCLUDE) $(CFLAGS) $(NATIVE_LIBS) $(OPTIMIZATION)
 
 # Linux Static Target (portable binary with static raylib)
 # Note: Still requires libarchive.so.13 on target system
 static: $(SRC_NATIVE) $(RAYLIB_LINUX_STATIC)
-	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho-static $(NATIVE_INCLUDE) $(CFLAGS) $(STATIC_LIBS_FLAGS) $(OPTIMIZATION) $(DEBUG_FLAGS) -s
+	$(CC_NATIVE) $(SRC_NATIVE) -o ../dist/lupinho-static $(NATIVE_INCLUDE) $(CFLAGS) $(STATIC_LIBS_FLAGS) $(OPTIMIZATION) -s
 
 # Clean generated files
 clean:

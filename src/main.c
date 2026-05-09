@@ -83,6 +83,10 @@ int main() {
     lua_api_setup_game("/loaded_game");
 #endif
 
+#ifndef DEBUG_MODE
+    SetTraceLogLevel(LOG_WARNING);
+#endif
+
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lupi Emulator");
     SetTargetFPS(60);
 
@@ -139,6 +143,9 @@ int main(int argc, char *argv[]) {
     lua_api_setup_game(game_dir);
 
     // Initialize Raylib window
+#ifndef DEBUG_MODE
+    SetTraceLogLevel(LOG_WARNING);
+#endif
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lupi Emulator");
     SetTargetFPS(60);
 
