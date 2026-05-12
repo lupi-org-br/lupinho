@@ -4,7 +4,7 @@
 
 ### 🕹️ [Try the Demo](https://lupinho.juneira.com/)
 
-> The demo game is **"balão-gatinho"**. Use the **arrow keys** to move and **Z** as the action button. You can use a joystick too.
+> The demo game is **"caio-pernocas"**. Use the **A,W,S,D** to move and **K** as the action button. You can use a joystick too.
 
 ## ✨ Features
 
