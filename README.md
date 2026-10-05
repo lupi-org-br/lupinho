@@ -24,7 +24,7 @@
 | Language | C99 |
 | Compiler | Emscripten (emcc) |
 | Graphics | Raylib |
-| Scripting | Lua 5.4 |
+| Scripting | Lua 5.5.1 |
 | Platform | WebAssembly |
 | Screen | 480×270 px @ 60 FPS |
 
@@ -178,7 +178,7 @@ function update()
     ui.rect(50, 50, 130, 130, 1)
     ui.circfill(200, 100, 20, 3)
     ui.trisfill(20, 250, 100, 250, 55, 350, 4)
-    
+
     -- Input example
     if ui.btnp(BTN_Z) then
         ui.log("Button Z pressed!")

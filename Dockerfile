@@ -28,10 +28,10 @@ RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk && \
     ./emsdk activate latest && \
     echo 'source /opt/emsdk/emsdk_env.sh' >> ~/.bashrc
 
-# Install Lua 5.1
-RUN wget https://www.lua.org/ftp/lua-5.1.5.tar.gz && \
-    tar -xzf lua-5.1.5.tar.gz && \
-    cd lua-5.1.5 && \
+# Install Lua
+RUN wget https://www.lua.org/ftp/lua-5.5.1.tar.gz && \
+    tar -xzf lua-5.5.1.tar.gz && \
+    cd lua-5.5.1 && \
     make linux && \
     make install
 
