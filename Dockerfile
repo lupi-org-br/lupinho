@@ -28,29 +28,28 @@ RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk && \
     ./emsdk activate latest && \
     echo 'source /opt/emsdk/emsdk_env.sh' >> ~/.bashrc
 
-# Install Lua 5.1
-RUN wget https://www.lua.org/ftp/lua-5.1.5.tar.gz && \
-    tar -xzf lua-5.1.5.tar.gz && \
-    cd lua-5.1.5 && \
+# Install Lua
+RUN wget https://www.lua.org/ftp/lua-5.5.1.tar.gz && \
+    tar -xzf lua-5.5.1.tar.gz && \
+    cd lua-5.5.1 && \
     make linux && \
     make install
 
 # Install LuaRocks
-RUN wget https://luarocks.org/releases/luarocks-3.10.0.tar.gz && \
-    tar -xzf luarocks-3.10.0.tar.gz && \
-    cd luarocks-3.10.0 && \
+RUN wget https://luarocks.org/releases/luarocks-3.13.0.tar.gz && \
+    tar -xzf luarocks-3.13.0.tar.gz && \
+    cd luarocks-3.13.0 && \
     ./configure && \
     make && \
     make install
 
 # Install Lua dependencies
-RUN luarocks install luasec 1.3.0-1 && \
+RUN luarocks install luasec 1.3.2-1 && \
     luarocks install luasocket 3.1.0-1 && \
-    luarocks install luafilesystem 1.8.0-1 && \
-    luarocks install luv 1.51.0-1 && \
+    luarocks install luafilesystem 1.9.0-1 && \
+    luarocks install luv 1.52.1-0 && \
     luarocks install busted && \
     luarocks install lua-cjson && \
-    luarocks install luabitop && \
     luarocks install argparse
 
 COPY . /lupinho/

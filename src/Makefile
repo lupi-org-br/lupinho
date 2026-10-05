@@ -19,9 +19,9 @@ RAYLIB_LIB = libs/web/raylib-web/libraylib.web.a
 LUA_WEB_INCLUDE = -Ilibs/web/lua-web
 LUA_WEB_LIB = libs/web/lua-web/liblua.web.a
 
-# Lua 5.5.0 (compiled with binary literal support)
-LUA_55_INCLUDE = -Ilibs/linux/lua-5.5.0/src
-LUA_55_LIB = libs/linux/lua-5.5.0/src/liblua.a
+# Lua (compiled with binary literal support)
+LUA_55_INCLUDE = -Ilibs/linux/lua-5.5.1/src
+LUA_55_LIB = libs/linux/lua-5.5.1/src/liblua.a
 
 # Native (Linux) Libraries
 NATIVE_LIBS = -lraylib $(LUA_55_LIB) -lm -ldl -lpthread -lX11 -larchive

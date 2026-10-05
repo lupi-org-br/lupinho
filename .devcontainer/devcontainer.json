@@ -9,9 +9,9 @@
 	"customizations": {
 		"vscode": {
 			"settings": {
-				"lua.runtime.version": "Lua 5.1",
+				"lua.runtime.version": "Lua 5.5.1",
 				"lua.workspace.library": [
-					"/usr/local/share/lua/5.1"
+					"/usr/local/share/lua/5.5.1"
 				]
 			},
 			"extensions": [
