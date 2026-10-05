@@ -1,0 +1,15 @@
+FROM emscripten/emsdk:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    patch zip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /lupinho
+COPY . /lupinho/
+RUN patch -d /lupinho/src/libs/lua -p1 /lupinho/src/libs/lua-5.5.1-binary-literals.patch
+# Install Lua 5.5.1
+RUN cd /lupinho/src/libs/lua && make
+ENV PATH=$PATH:/lupinho/src/libs/lua
+RUN make -C /lupinho/src web

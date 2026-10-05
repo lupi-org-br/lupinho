@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: wasm
+            os: ubuntu-latest
+            artifact: game.*
+          - name: linux
+            os: ubuntu-latest
+            artifact: lupinho
+          - name: macos
+            os: ubuntu-latest
+            artifact: lupinho*
+          - name: windows
+            os: ubuntu-latest
+            artifact: lupinho.exe
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Build with Docker
+        run: make -C src docker.${{ matrix.name }}
+
+      - name: Upload core
+        uses: actions/upload-artifact@v7
+        with:
+          name: lupinho-${{ matrix.name }}
+          path: |
+            dist/${{ matrix.artifact }}
+          if-no-files-found: error

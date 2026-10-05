@@ -1,0 +1,29 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    make \
+    gcc-mingw-w64-x86-64 \
+    libz-mingw-w64-dev \
+    patch \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /lupinho
+COPY . /lupinho/
+RUN patch -d /lupinho/src/libs/lua -p1 \
+    < /lupinho/src/libs/lua-5.5.1-binary-literals.patch
+# GitHub lua makefile defaults to -DLUA_USE_LINUX / -ldl / -Wl,-E.
+# Override those so MinGW gets a Windows liblua.a + lua.exe (_WIN32 → LUA_USE_WINDOWS).
+RUN make -C /lupinho/src/libs/lua \
+      CC=x86_64-w64-mingw32-gcc \
+      AR="x86_64-w64-mingw32-ar rc" \
+      RANLIB=x86_64-w64-mingw32-ranlib \
+      MYCFLAGS="-std=c99" \
+      MYLDFLAGS="" \
+      MYLIBS="" \
+      LUA_T=lua.exe
+ENV PATH=$PATH:/lupinho/src/libs/lua
+RUN make -C /lupinho/src windows

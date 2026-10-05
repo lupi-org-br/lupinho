@@ -1,0 +1,45 @@
+This patch adds 0b/0B integer literals to Lua 5.5.1 (not in upstream).
+Apply from src/libs/lua: patch -p1 < ../lua-5.5.1-binary-literals.patch
+Lupi games use values like 0b10101010 for bitmasks.
+
+--- a/llex.c
++++ b/llex.c
+@@ -245,14 +245,19 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
+   TValue obj;
+   const char *expo = "Ee";
+   int first = ls->current;
++  int binary = 0;
+   lua_assert(lisdigit(ls->current));
+   save_and_next(ls);
+   if (first == '0' && check_next2(ls, "xX"))  /* hexadecimal? */
+     expo = "Pp";
++  else if (first == '0' && check_next2(ls, "bB"))  /* binary (0b/0B)? */
++    binary = 1;
+   for (;;) {
+-    if (check_next2(ls, expo))  /* exponent mark? */
++    if (!binary && check_next2(ls, expo))  /* exponent mark? */
+       check_next2(ls, "-+");  /* optional exponent sign */
+-    else if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
++    else if (binary && (ls->current == '0' || ls->current == '1'))
++      save_and_next(ls);
++    else if (!binary && (lisxdigit(ls->current) || ls->current == '.'))
+       save_and_next(ls);
+     else break;
+   }
+--- a/lobject.c
++++ b/lobject.c
+@@ -350,6 +350,14 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
+       empty = 0;
+     }
+   }
++  else if (s[0] == '0' &&
++      (s[1] == 'b' || s[1] == 'B')) {  /* binary? */
++    s += 2;  /* skip '0b' */
++    for (; *s == '0' || *s == '1'; s++) {
++      a = (a << 1) | cast_uint(*s - '0');
++      empty = 0;
++    }
++  }
+   else {  /* decimal */
+     for (; lisdigit(cast_uchar(*s)); s++) {
+       int d = *s - '0';

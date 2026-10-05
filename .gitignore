@@ -3,3 +3,11 @@ dist/*
 site/index.zip
 site/dist/*
 !site/dist/.keep
+.DS_Store
+*.o
+*.exe
+src/libs/windows/
+src/libs/macos/
+src/libs/web/raylib-build/
+src/libs/linux/raylib/*.a
+src/libs/linux/raylib/*.o

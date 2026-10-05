@@ -174,7 +174,7 @@ function update()
     t = t + 0.05
     y = math.sin(t) * 25
 
-    ui.print("Bem-vindo ao Lupi!", 280, 180 + math.floor(y))
+    ui.print("Bem-vindo ao Lupi!", 280, 180 + math.floor(y), 7)
     ui.rect(50, 50, 130, 130, 1)
     ui.circfill(200, 100, 20, 3)
     ui.trisfill(20, 250, 100, 250, 55, 350, 4)

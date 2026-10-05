@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+# osxcross ships Linux amd64 binaries; pin the platform so Apple Silicon uses qemu.
+FROM --platform=linux/amd64 crazymax/osxcross:latest-ubuntu AS osxcross
+
+FROM --platform=linux/amd64 ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    clang \
+    lld \
+    llvm \
+    libc6-dev \
+    make \
+    patch \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=osxcross /osxcross /osxcross
+ENV PATH="/osxcross/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/osxcross/lib"
+
+WORKDIR /lupinho
+COPY . /lupinho/
+RUN patch -d /lupinho/src/libs/lua -p1 /lupinho/src/libs/lua-5.5.1-binary-literals.patch
+# Install Lua 5.5.1
+RUN cd /lupinho/src/libs/lua && make CC=clang
+ENV PATH=$PATH:/lupinho/src/libs/lua
+RUN make -C /lupinho/src macos

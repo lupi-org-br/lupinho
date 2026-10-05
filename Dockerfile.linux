@@ -1,0 +1,79 @@
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /lupinho
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cmake \
+    make \
+    libuv1-dev \
+    libc-dev \
+    libreadline-dev \
+    gcc \
+    g++ \
+    git \
+    libssl-dev \
+    wget \
+    curl \
+    zip \
+    unzip \
+    bash \
+    python3 \
+    ca-certificates \
+    xz-utils \
+    zlib1g-dev \
+    libgl1-mesa-dev \
+    libx11-dev \
+    libxcursor-dev \
+    libxinerama-dev \
+    libxrandr-dev \
+    libxi-dev \
+    patch \
+    imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
+# Debian ImageMagick 6 exposes convert/identify, not IM7 `magick`.
+# lupi-codec calls `magick identify` and `magick input.png ...`.
+RUN printf '%s\n' '#!/bin/sh' \
+      'if [ "$1" = identify ]; then shift; exec identify "$@"; fi' \
+      'exec convert "$@"' > /usr/local/bin/magick \
+    && chmod +x /usr/local/bin/magick
+
+# Install Emscripten
+RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk && \
+    cd /opt/emsdk && \
+    ./emsdk install latest && \
+    ./emsdk activate latest && \
+    echo 'source /opt/emsdk/emsdk_env.sh' >> ~/.bashrc
+
+COPY . /lupinho/
+# Patch
+RUN patch -d /lupinho/src/libs/lua -p1 < /lupinho/src/libs/lua-5.5.1-binary-literals.patch
+
+# Install Lua 5.5.1
+RUN cd /lupinho/src/libs/lua && make
+ENV PATH=$PATH:/lupinho/src/libs/lua
+
+# LuaRocks 3.10 does not detect Lua 5.5; 3.13.0 added support.
+# GitHub lua/lua builds lua + liblua.a in-tree (no make install prefix).
+RUN wget https://luarocks.org/releases/luarocks-3.13.0.tar.gz && \
+    tar -xzf luarocks-3.13.0.tar.gz && \
+    cd luarocks-3.13.0 && \
+    ./configure \
+      --lua-version=5.5 \
+      --with-lua-bin=/lupinho/src/libs/lua \
+      --with-lua-include=/lupinho/src/libs/lua \
+      --with-lua-lib=/lupinho/src/libs/lua && \
+    make && \
+    make install
+
+# Install Lua dependencies
+RUN luarocks install luasec 1.3.0-1 && \
+    luarocks install luasocket 3.1.0-1 && \
+    luarocks install luafilesystem 1.9.0-1 && \
+    luarocks install luv 1.51.0-1 && \
+    luarocks install busted && \
+    luarocks install lua-cjson && \
+    luarocks install argparse
+
+RUN make -C /lupinho/src linux
