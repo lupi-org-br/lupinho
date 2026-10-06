@@ -1,209 +1,250 @@
 # 🎮 Lupinho
+### Criado por: [Juneira](https://github.com/juneira)
+**Lupinho** é um Simulador para o Console Brasileiro **Lupi**.  
+Funciona diretamente no seu navegador usando WebAssembly, permitindo que crie e jogue jogos usando API de programação Lua.
 
-**Lupinho** is a web-based simulator for **Lupi**, a Brazilian game console. It runs directly in your browser using WebAssembly, allowing you to write and play games using a simple Lua scripting API.
+### 🕹️ [Teste a Demo](https://lupinho.juneira.com/)
 
-### 🕹️ [Try the Demo](https://lupinho.juneira.com/)
+> O jogo de demonstração é ["caio-pernocas"](https://github.com/lupi-org-br/caio-pernocas).  
+> Use as teclas W, A, S, D para mover e K como botão de ação. Você também pode usar um Controle.
+### Simulador Vs Emulador 
+É importante entender a diferença entre estes dois termos para saber exatamente como o Lupinho funciona:
+### **Emulador**:  
+  > Tenta recriar o hardware original de forma fiel e em nível de baixo nível (processador, memória, chips gráficos, etc.).  
+  O objetivo é rodar o software original feito para aquela máquina física exata, processando instrução por instrução da CPU original.
+### **Simulador**:  
+  > Recria o comportamento e o ambiente de execução de um sistema, muitas vezes em um nível mais abstrato ou moderno, sem a necessidade de replicar o hardware original fisicamente.  
+   No caso do Lupinho, ele simula o console Lupi diretamente sobre tecnologias modernas (como WebAssembly e Raylib), focando em rodar jogos criados especificamente para essa API, e não em rodar ROMs de um hardware físico pré-existente.  
+    
+Você pode ter mais informações sobre os **Limites** nesta Issue: [**LIMITAÇÕES**](https://github.com/lupi-org-br/lupinho/issues/12)  
 
-> The demo game is **"caio-pernocas"**. Use the **A,W,S,D** to move and **K** as the action button. You can use a joystick too.
+## ✨ Recursos
 
-## ✨ Features
+- 🌐 **Funciona no navegador** — Roda em WebAssembly, necessário poucas instalações e configurações
+- 📜 **Scripts em Lua** — Escreva seus jogos em Lua de forma simples e fácil de aprender
+- 🎨 **Gráficos 2D** — Desenhe texto, linhas, retângulos, círculos e triângulos
+- 🖼️ **Sprites e Tiles** — Carregue e desenhe spritesheets com suporte a inversão (flip)
+- 🗺️ **Sistema de Mapas (Tilemap)** — Desenhe grandes mapas com rolagem de câmera (scrolling)
+- 🎮 **Controle e Teclado** — Suporte de entrada tanto para controles quanto para teclado
+- ⚡ **60 FPS** — Jogabilidade fluida a 60 quadros por segundo
+- 🔧 **Feito em Raylib** — Construído sobre a leve biblioteca gráfica Raylib
 
-- 🌐 **Browser-based** — Runs on WebAssembly, no installation required
-- 📜 **Lua scripting** — Write your games in simple, easy-to-learn Lua
-- 🎨 **2D Graphics** — Draw text, lines, rectangles, circles, and triangles
-- 🖼️ **Sprites & Tiles** — Load and draw sprite sheets with flip support
-- 🗺️ **Tilemap System** — Draw large maps with camera scrolling
-- 🎮 **Gamepad & Keyboard** — Input support for both gamepads and keyboard
-- ⚡ **60 FPS** — Smooth gameplay at 60 frames per second
-- 🔧 **Raylib powered** — Built on the lightweight Raylib graphics library
+## 🛠️ Tecnologias Utilizadas
 
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Language | C99 |
-| Compiler | Emscripten (emcc) |
-| Graphics | Raylib |
+| Componente | Tecnologia |
+|------------|------------|
+| Linguagem | C99 |
+| Compilador | Emscripten (emcc) |
+| Gráficos | Raylib |
 | Scripting | Lua 5.4 |
-| Platform | WebAssembly |
-| Screen | 480×270 px @ 60 FPS |
+| Plataforma | WebAssembly |
+| Tela | 480×270 px @ 60 FPS |
 
-## 📁 Project Structure
+## 📁 Estrutura do Projeto
 
 ```
 lupinho/
-├── dist/               # Compiled WebAssembly output
-│   ├── game.html
+├── dist/                    # Saída do WebAssembly Compilado
+│   ├── game.html            # Estes são os arquivos que você deve copiar para lupinho/site/dist/
 │   ├── game.js
 │   ├── game.wasm
 │   └── game.data
+├── site/
+|   ├── index.html
+│   └── dist/
+│       └── .keep            # Cole a Saída do WebAssembly Compilado aqui
 ├── src/
-│   ├── main.c          # Main entry point
-│   ├── lua_api.c       # Lua bindings for ui.* API
-│   ├── ui.c/h          # Rendering system & frame buffer
-│   ├── types.h         # Draw item type definitions
-│   ├── font.h          # Embedded bitmap font
+│   ├── main.c               # Ponto de entrada principal
+│   ├── lua_api.c            # Associações (bindings) de Lua para a API ui.*
+│   ├── ui.c/h               # Sistema de renderização e buffer de quadro
+│   ├── types.h              # Definições de tipos de itens de desenho
+│   ├── font.h               # Fonte bitmap embutida
 │   ├── Makefile
 │   └── libs/
-│       ├── lua-web/    # Lua compiled for WebAssembly
-│       └── raylib-web/ # Raylib compiled for WebAssembly
-├── game-example/       # Example game directory
-│   ├── game.lua        # Game entry point
-│   ├── palette.lua     # Color palette definition
-│   ├── lupi_manifest.txt
-│   ├── img/            # Bitmap sprites
-│   └── map/            # Tilemap data
-└── README.md
+│       ├── lua-web/         # Lua compilado para WebAssembly
+│       └── raylib-web/      # Raylib compilado para WebAssembly
+├── game-example/            # Diretório de jogo de exemplo
+│   ├── game.lua             # Ponto de entrada do jogo
+│   ├── palette.lua          # Definição da paleta de cores - Gerado pelo lupi-codec
+│   ├── lupi_manifest.txt    # Arquivo de metadados para o Lupi - Gerado pelo lupi-codec
+│   ├── img/                 # Sprites bitmap
+│   └── map/                 # Dados do mapa de tiles
+└── README.md                # Este Leia-me
+└── README_en.md             # Leia-me em inglês
 ```
 
-## 🚀 Getting Started
+## 🚀 Primeiros Passos
 
-### Prerequisites
+### Pré-requisitos
 
-- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) installed and activated
+- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) instalado e ativado
+- Caso use Sistema Linux, procure por emscripten na loja de sua distro.
+- Se usa Windows, recomendo instalar o Ubuntu via WSL (Subsistema Linux para windows) e realizar os procedimentos lá.
 
-### Building
+### Compilando
 
 ```bash
 cd src
 
-# Development build (with FPS counter)
+# Versão de desenvolvimento
 make web
 
-# Production build (optimized, no debug)
+# Versão de produção (otimizada, sem depuração)
 make production
 ```
 
-### Running
+### Executando
 
-After building, serve the `dist/` folder with any HTTP server:
+Após compilar, copie o conteúdo de **`lupinho/dist/`** e cole em **`lupinho/site/dist/`**.  
+Então volte a **`lupinho/site/`** e crie um servidor https local nesta past, abaixo temos exemplos de Python e Node.js.
 
+#### Usando Node.js
 ```bash
-# Using Node.js
-npx serve ../dist
+cd /site
+npx serve
+```
+#### Usando Python3
+```bash
+cd /site
+python3 -m http.server 8080
 ```
 
-Then open `http://localhost:8080` in your browser.
+Em seguida, abra `http://localhost:8080` no seu navegador.
 
-## 📖 Lua API
+## 📖 API Lua
 
-Games are written in Lua. Your script should define the `update()` function, which is called every frame (60 times per second).
+Os jogos são escritos em Lua.  
+Seu script deve definir a função `update()`, que é chamada a cada quadro (60 vezes por segundo).
 
 ### `update()`
-Called every frame. Update your game logic and draw here.
+Chamada a cada quadro. Atualize a lógica do seu jogo e faça os desenhos aqui.
 
-### Color Palette System
+### Sistema de Paleta de Cores
 
-Lupinho uses a palette-based color system with 256 colors in BGR555 format (5 bits per channel, Big Endian).
+O Lupinho usa um sistema de cores baseado em paleta com 256 cores no formato BGR555 (5 bits por canal, Big Endian).
 
-| Function | Description |
-|----------|-------------|
-| `ui.palset(index, bgr555)` | Set a palette color at the specified index (0-255) |
+| Função | Descrição |
+|--------|-----------|
+| `ui.palset(index, bgr555)` | Define uma cor da paleta no índice especificado (0-255) |
 
-### Drawing Functions
+### Funções de Desenho
 
-All drawing functions use palette indices (0-255) for colors:
+Todas as funções de desenho usam índices da paleta (0-255) para as cores:
 
-| Function | Description |
-|----------|-------------|
-| `ui.rect(x1, y1, x2, y2, color)` | Draw rectangle outline |
-| `ui.rectfill(x1, y1, x2, y2, color)` | Draw filled rectangle |
-| `ui.draw_rect(x, y, w, h, filled, color)` | Draw rectangle (filled or outline) |
-| `ui.circfill(x, y, radius, color)` | Draw filled circle |
-| `ui.draw_circle(cx, cy, r, filled, color, border, border_color)` | Draw circle with optional border |
-| `ui.trisfill(x1, y1, x2, y2, x3, y3, color)` | Draw filled triangle |
-| `ui.line(x1, y1, x2, y2, color)` | Draw a line |
-| `ui.print(text, x, y, color)` | Draw text using bitmap font |
+| Função | Descrição |
+|--------|-----------|
+| `ui.rect(x1, y1, x2, y2, color)` | Desenha o contorno de um retângulo |
+| `ui.rectfill(x1, y1, x2, y2, color)` | Desenha um retângulo preenchido |
+| `ui.draw_rect(x, y, w, h, filled, color)` | Desenha um retângulo (preenchido ou contorno) |
+| `ui.circfill(x, y, radius, color)` | Desenha um círculo preenchido |
+| `ui.draw_circle(cx, cy, r, filled, color, border, border_color)` | Desenha um círculo com borda opcional |
+| `ui.trisfill(x1, y1, x2, y2, x3, y3, color)` | Desenha um triângulo preenchido |
+| `ui.line(x1, y1, x2, y2, color)` | Desenha uma linha |
+| `ui.print(text, x, y, color)` | Desenha texto usando a fonte bitmap |
 
-### Screen Functions
+### Funções de Tela
 
-| Function | Description |
-|----------|-------------|
-| `ui.cls(color)` | Clear screen with palette color |
-| `ui.camera(x, y)` | Set camera offset; `ui.camera()` resets |
-| `ui.clip(x, y, w, h)` | Set clipping region; `ui.clip()` resets |
-| `ui.fillp(b1, b2, ...)` | Set 8x8 fill pattern (1 byte per row) |
+| Função | Descrição |
+|--------|-----------|
+| `ui.cls(color)` | Limpa a tela com a cor da paleta |
+| `ui.camera(x, y)` | Define o deslocamento da câmera; `ui.camera()` reseta |
+| `ui.clip(x, y, w, h)` | Define a região de corte (clip); `ui.clip()` reseta |
+| `ui.fillp(b1, b2, ...)` | Define o padrão de preenchimento 8x8 (1 byte por linha) |
 
-### Sprites & Tiles
+### Sprites e Tiles
 
-| Function | Description |
-|----------|-------------|
-| `ui.spr(sprite_table, x, y, flipped)` | Draw a sprite |
-| `ui.tile(tileset_table, tile_index, x, y)` | Draw a tile (index bit 10 flips horizontally) |
+| Função | Descrição |
+|--------|-----------|
+| `ui.spr(sprite_table, x, y, flipped)` | Desenha um sprite |
+| `ui.tile(tileset_table, tile_index, x, y)` | Desenha um tile (o bit 10 do índice inverte horizontalmente) |
 
-### Map Functions
+### Funções de Mapa
 
-| Function | Description |
-|----------|-------------|
-| `ui.map(layer_table, cam_x, cam_y)` | Draw a tilemap layer |
+| Função | Descrição |
+|--------|-----------|
+| `ui.map(layer_table, cam_x, cam_y)` | Desenha uma camada do mapa de tiles |
 
-### Input Functions
+### Funções de Entrada
 
-| Function | Description |
-|----------|-------------|
-| `ui.btn(button, pad)` | Check if button is held (gamepad or keyboard) |
-| `ui.btnp(button, pad)` | Check if button was just pressed |
+| Função | Descrição |
+|--------|-----------|
+| `ui.btn(button, pad)` | Verifica se o botão está pressionado (controle ou teclado) |
+| `ui.btnp(button, pad)` | Verifica se o botão acabou de ser pressionado |
 
-Button constants: `UP`, `DOWN`, `LEFT`, `RIGHT`, `BTN_Z`, `BTN_Q`, `BTN_E`, `BTN_F`, `BTN_G`
+Constantes de botões: `UP`, `DOWN`, `LEFT`, `RIGHT`, `BTN_Z`, `BTN_Q`, `BTN_E`, `BTN_F`, `BTN_G`
 
-### Utility Functions
+### Funções Utilitárias
 
-| Function | Description |
-|----------|-------------|
-| `ui.log(message)` | Print to console |
-| `ui.mid(a, b, c)` | Return middle value of three numbers |
+| Função | Descrição |
+|--------|-----------|
+| `ui.log(message)` | Imprime no console |
+| `ui.mid(a, b, c)` | Retorna o valor do meio entre três números |
 
-### Example Game
+### Jogo de Exemplo
 
 ```lua
--- Define your palette
+-- Defina sua paleta
+-- O primeiro índice (cor) sempre será transparente (0x0000).
 Palette = {
-    0x0000, 0x1516, 0x25B4, 0x20A6, 0x1DFD, 0x46FE, 0x7FFF, 0x2532
+    [1] = 0x0000,
+    [2] = 0x1516,
+    [3] = 0x25B4,
+    [4] = 0x20A6,
+    [5] = 0x1DFD,
+    [6] = 0x46FE,
+    [7] = 0x7FFF,
+    [8] = 0x2532
 }
 
--- Set palette colors
+-- Faz a Contagem e define as cores da paleta
 for i = 1, #Palette do
-    ui.palset(i - 1, Palette[i])
+-- Ajusta o índice do Lua (começa em 1) para O índice da API Raylib (começa em 0)
+    ui.palset(i - 1, Palette[i])
 end
 
--- Game variables
+-- Variáveis do jogo
 x = 200
 t = 0
 
 function update()
-    t = t + 0.05
-    y = math.sin(t) * 25
+    t = t + 0.05
+    y = math.sin(t) * 25
 
-    ui.print("Bem-vindo ao Lupi!", 280, 180 + math.floor(y))
-    ui.rect(50, 50, 130, 130, 1)
-    ui.circfill(200, 100, 20, 3)
-    ui.trisfill(20, 250, 100, 250, 55, 350, 4)
-    
-    -- Input example
-    if ui.btnp(BTN_Z) then
-        ui.log("Button Z pressed!")
-    end
+    ui.print("Bem-vindo ao Lupi!", 280, 180 + math.floor(y))
+    ui.rect(50, 50, 130, 130, 1)
+    ui.circfill(200, 100, 20, 3)
+    ui.trisfill(20, 250, 100, 250, 55, 350, 4)
+    
+    -- Exemplo de entrada
+    if ui.btnp(BTN_Z) then
+        ui.log("Botão Z pressionado!")
+    end
 end
 ```
 
-## 🧹 Cleanup
-
+## 🧹 Limpeza
+Este comando irá remover os arquivos compilados.
 ```bash
+cd /src
 make clean
 ```
 
-## 🤝 Contributing
+## 🤝 Contribuindo
+Encorajamos contribuições!  
+No entanto, **por favor, abra uma issue antes de enviar um PR** para que possamos discutir as mudanças.  
+As issues podem ser escritas em **português, espanhol ou inglês**.
 
-We encourage contributions! However, **please open an issue before submitting a PR** so we can discuss the changes. Issues can be written in **Portuguese, Spanish, or English**.
+Junte-se ao nosso Discord!  
+### 💬 [Lupi](lupi.api.br/l/discord)
 
-We don't have an official communication channel yet, but this README will be updated once we create one.
+## 📝 Licença
 
-## 📝 License
-
-This project is open source.
+Este projeto é de código aberto.
 
 ---
+<div align="center">
+  
+**Feito com ❤️ no Brasil 🇧🇷**  
+**Revisado e Atualizado por : [Hiriko](https://github.com/Hirikko) 🩷 e [Felipowsky](https://github.com/felipowsky) 🧡**
 
-<p align="center">
-  Made with ❤️ in Brazil 🇧🇷
-</p>
+</div>
