@@ -57,6 +57,7 @@ extern uint8_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 void fb_set(int x, int y, int color, bool check_pattern);
 void clear_frame_buffer();
 void draw_frame_buffer();
+void present_frame_rgb565(uint16_t *out);
 
 //----------------------------------------------------------------------------------
 // Print (bitmap font) Functions

@@ -1,0 +1,57 @@
+name: libretro
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - ".github/workflows/libretro.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - ".github/workflows/libretro.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-latest
+            target: libretro
+            artifact: lupinho_libretro.so
+          - name: macos
+            os: macos-latest
+            target: libretro
+            artifact: lupinho_libretro.dylib
+          - name: windows
+            os: ubuntu-latest
+            target: libretro-win
+            artifact: lupinho_libretro.dll
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux deps
+        if: matrix.name == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential zlib1g-dev
+
+      - name: Install MinGW (Windows core)
+        if: matrix.name == 'windows'
+        run: sudo apt-get update && sudo apt-get install -y make gcc-mingw-w64-x86-64 libz-mingw-w64-dev
+
+      - name: Build
+        working-directory: src
+        run: make ${{ matrix.target }}
+
+      - name: Upload core
+        uses: actions/upload-artifact@v7
+        with:
+          name: lupinho-libretro-${{ matrix.name }}
+          path: |
+            dist/${{ matrix.artifact }}
+            dist/lupinho_libretro.info
+          if-no-files-found: error

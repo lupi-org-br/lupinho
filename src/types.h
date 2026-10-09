@@ -1,7 +1,17 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#ifdef LIBRETRO
+#include <stdbool.h>
+typedef struct Color {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+    unsigned char a;
+} Color;
+#else
 #include "raylib.h"
+#endif
 #include <string.h>
 #include <stdint.h>
 

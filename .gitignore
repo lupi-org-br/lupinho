@@ -3,3 +3,4 @@ dist/*
 site/index.zip
 site/dist/*
 !site/dist/.keep
+.DS_Store

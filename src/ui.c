@@ -294,6 +294,20 @@ void draw_print(const char *text, int x, int y, int color_index) {
 //----------------------------------------------------------------------------------
 // Frame Buffer Functions
 //----------------------------------------------------------------------------------
+void present_frame_rgb565(uint16_t *out) {
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
+            Color c = get_palette_color(frame_buffer[y][x]);
+            if (c.a == 0) {
+                out[y * SCREEN_WIDTH + x] = 0;
+                continue;
+            }
+            out[y * SCREEN_WIDTH + x] = (uint16_t)(((c.r >> 3) << 11) | ((c.g >> 2) << 5) | (c.b >> 3));
+        }
+    }
+}
+
+#ifndef LIBRETRO
 Texture scene;
 
 Image generate_image_from_frame_buffer() {
@@ -321,13 +335,16 @@ void draw_frame_buffer() {
     DrawTexturePro(scene, source, dest, origin, 0, WHITE);
     UnloadImage(image);
 }
+#endif
 
 void clear_frame_buffer() {
     for(int i = 0; i < SCREEN_HEIGHT; i++) {
         memset(frame_buffer[i], 0, SCREEN_WIDTH);
     }
 
+#ifndef LIBRETRO
     UnloadTexture(scene);
+#endif
 }
 
 //----------------------------------------------------------------------------------

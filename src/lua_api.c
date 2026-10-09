@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <limits.h>
 
 #include "lua_api.h"
 #include "ui.h"
-#include "raylib.h"
+#include "lupi_input.h"
 
 lua_State *globalLuaState = NULL;
 
@@ -218,67 +219,22 @@ int lua_spr(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
-// Helper function to get the keyboard key corresponding to a gamepad button
-//----------------------------------------------------------------------------------
-static int get_keyboard_key_for_button(int button) {
-    switch (button) {
-        // D-pad / AWSD keys
-        case GAMEPAD_BUTTON_LEFT_FACE_UP:    return KEY_W;
-        case GAMEPAD_BUTTON_LEFT_FACE_DOWN:  return KEY_S;
-        case GAMEPAD_BUTTON_LEFT_FACE_LEFT:  return KEY_A;
-        case GAMEPAD_BUTTON_LEFT_FACE_RIGHT: return KEY_D;
-        // Action buttons
-        case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: return KEY_J;
-        case GAMEPAD_BUTTON_RIGHT_FACE_DOWN:  return KEY_K;
-        case GAMEPAD_BUTTON_RIGHT_FACE_UP:    return KEY_L;
-        case GAMEPAD_BUTTON_RIGHT_FACE_LEFT:  return KEY_M;
-        case GAMEPAD_BUTTON_LEFT_TRIGGER_1:   return KEY_G;
-        case GAMEPAD_BUTTON_RIGHT_TRIGGER_1:  return KEY_H;
-        default: return -1;
-    }
-}
-
-//----------------------------------------------------------------------------------
 // ui.btn(button:number, pad:number) -> bool
-// Checks both gamepad and keyboard input
 //----------------------------------------------------------------------------------
 int lua_btn(lua_State *L) {
     int button = (int)luaL_checknumber(L, 1);
     int pad = (int)luaL_optnumber(L, 2, 0);
-
-    bool is_down = IsGamepadButtonDown(pad, button);
-
-    if (!is_down) {
-        int key = get_keyboard_key_for_button(button);
-        if (key != -1) {
-            is_down = IsKeyDown(key);
-        }
-    }
-
-    lua_pushboolean(L, is_down);
-
+    lua_pushboolean(L, lupi_button_down(pad, button));
     return 1;
 }
 
 //----------------------------------------------------------------------------------
 // ui.btnp(button:number, pad:number) -> bool
-// Checks both gamepad and keyboard input (pressed this frame)
 //----------------------------------------------------------------------------------
 int lua_btnp(lua_State *L) {
     int button = (int)luaL_checknumber(L, 1);
     int pad = (int)luaL_optnumber(L, 2, 0);
-
-    bool is_pressed = IsGamepadButtonPressed(pad, button);
-
-    if (!is_pressed) {
-        int key = get_keyboard_key_for_button(button);
-        if (key != -1) {
-            is_pressed = IsKeyPressed(key);
-        }
-    }
-
-    lua_pushboolean(L, is_pressed);
-
+    lua_pushboolean(L, lupi_button_pressed(pad, button));
     return 1;
 }
 
@@ -693,6 +649,77 @@ void inject_sprites_global(lua_State *L, const char *manifest_path, const char *
 }
 
 //----------------------------------------------------------------------------------
+// Palette.hex(0xRRGGBB) — RGB888 to 0-based palette index (BGR555 match / nearest)
+//----------------------------------------------------------------------------------
+static int lua_palette_hex(lua_State *L) {
+    lua_Integer rgb = luaL_checkinteger(L, 1);
+    int r = (int)((rgb >> 16) & 0xFF);
+    int g = (int)((rgb >> 8) & 0xFF);
+    int b = (int)(rgb & 0xFF);
+    int want = ((b >> 3) << 10) | ((g >> 3) << 5) | (r >> 3);
+
+    lua_getglobal(L, "Palette");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+
+    int best_i = 0;
+    int best_dist = INT_MAX;
+    int n = (int)luaL_len(L, -1);
+    for (int i = 1; i <= n; i++) {
+        lua_rawgeti(L, -1, i);
+        int pal = (int)lua_tointeger(L, -1);
+        lua_pop(L, 1);
+
+        if (pal == want) {
+            lua_pop(L, 1);
+            lua_pushinteger(L, i - 1);
+            return 1;
+        }
+
+        int pr = pal & 0x1F;
+        int pg = (pal >> 5) & 0x1F;
+        int pb = (pal >> 10) & 0x1F;
+        int dr = pr - (r >> 3);
+        int dg = pg - (g >> 3);
+        int db = pb - (b >> 3);
+        int dist = dr * dr + dg * dg + db * db;
+        if (dist < best_dist) {
+            best_dist = dist;
+            best_i = i - 1;
+        }
+    }
+
+    lua_pop(L, 1);
+    lua_pushinteger(L, best_i);
+    return 1;
+}
+
+//----------------------------------------------------------------------------------
+// palette preload — load palette.lua and attach Palette.hex
+//----------------------------------------------------------------------------------
+static int lua_palette_loader(lua_State *L) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/palette.lua", current_game_dir);
+    if (luaL_loadfile(L, path) != LUA_OK) {
+        return lua_error(L);
+    }
+    if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+        return lua_error(L);
+    }
+
+    lua_getglobal(L, "Palette");
+    if (!lua_istable(L, -1)) {
+        return luaL_error(L, "palette.lua did not define Palette table");
+    }
+    lua_pushcfunction(L, lua_palette_hex);
+    lua_setfield(L, -2, "hex");
+    return 1;
+}
+
+//----------------------------------------------------------------------------------
 // Sprites preload loader — called when Lua does require("sprites")
 //----------------------------------------------------------------------------------
 static int lua_sprites_loader(lua_State *L) {
@@ -818,21 +845,23 @@ void lua_api_init(void) {
 //----------------------------------------------------------------------------------
 // lua_api_setup_game — configure package path, register sprites preload, load game
 //----------------------------------------------------------------------------------
-void lua_api_setup_game(const char *game_dir) {
+int lua_api_setup_game(const char *game_dir) {
     snprintf(current_game_dir, sizeof(current_game_dir), "%s", game_dir);
 
     lua_getglobal(globalLuaState, "package");
 
-    lua_getfield(globalLuaState, -1, "path");
-    const char *current_path = lua_tostring(globalLuaState, -1);
-    lua_pop(globalLuaState, 1);
-    lua_pushfstring(globalLuaState, "%s;%s/?.lua", current_path, game_dir);
+    /* Games are Lua-only: search the game tree, never host C modules (.so/.dylib). */
+    lua_pushfstring(globalLuaState, "%s/?.lua;%s/?/init.lua", game_dir, game_dir);
     lua_setfield(globalLuaState, -2, "path");
+    lua_pushliteral(globalLuaState, "");
+    lua_setfield(globalLuaState, -2, "cpath");
 
     lua_getfield(globalLuaState, -1, "preload");
+    lua_pushcfunction(globalLuaState, lua_palette_loader);
+    lua_setfield(globalLuaState, -2, "palette");
     lua_pushcfunction(globalLuaState, lua_sprites_loader);
     lua_setfield(globalLuaState, -2, "sprites");
-    lua_pop(globalLuaState, 2); // pop preload and package
+    lua_pop(globalLuaState, 2);
 
     char game_path[512];
     snprintf(game_path, sizeof(game_path), "%s/game.lua", game_dir);
@@ -840,7 +869,9 @@ void lua_api_setup_game(const char *game_dir) {
     if (luaL_dofile(globalLuaState, game_path) != LUA_OK) {
         printf("Error loading game: %s\n", lua_tostring(globalLuaState, -1));
         lua_pop(globalLuaState, 1);
+        return 1;
     }
+    return 0;
 }
 
 //----------------------------------------------------------------------------------
@@ -866,6 +897,8 @@ void lua_api_call_update(void) {
 // lua_api_close — shut down the Lua state
 //----------------------------------------------------------------------------------
 void lua_api_close(void) {
-    lua_close(globalLuaState);
-    globalLuaState = NULL;
+    if (globalLuaState) {
+        lua_close(globalLuaState);
+        globalLuaState = NULL;
+    }
 }
