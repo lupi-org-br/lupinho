@@ -12,6 +12,50 @@ lua_State *globalLuaState = NULL;
 static char current_game_dir[512] = "";
 static lua_Number frame_counter = 0;
 
+static int pointer_x;
+static int pointer_y;
+static int pointer_valid;
+static int pointer_pressed;
+static int pointer_last_x = -1;
+static int pointer_last_y = -1;
+
+// ui.pointer() returns x, y, just_pressed, absolute. A still cursor returns
+// nil so the d-pad keeps aiming. On macOS the cursor-enter flag stays false
+// when the pointer is already inside the window, so a position change counts
+// too.
+static void poll_pointer(void) {
+    Vector2 delta;
+    int x;
+    int y;
+    int moved;
+
+    pointer_valid = 0;
+    pointer_pressed = 0;
+    if (!IsWindowReady()) return;
+
+    x = GetMouseX();
+    y = GetMouseY();
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= SCREEN_WIDTH) x = SCREEN_WIDTH - 1;
+    if (y >= SCREEN_HEIGHT) y = SCREEN_HEIGHT - 1;
+
+    delta = GetMouseDelta();
+    moved = delta.x != 0.0f || delta.y != 0.0f || x != pointer_last_x || y != pointer_last_y;
+    pointer_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+    // Ignore the untouched default at (0, 0) before the cursor has entered.
+    if (!IsCursorOnScreen() && !moved && !pointer_pressed) return;
+    if (pointer_last_x < 0 && x == 0 && y == 0 && !pointer_pressed && !IsCursorOnScreen()) return;
+    if (!pointer_pressed && x == pointer_last_x && y == pointer_last_y) return;
+
+    pointer_last_x = x;
+    pointer_last_y = y;
+    pointer_x = x;
+    pointer_y = y;
+    pointer_valid = 1;
+}
+
 //----------------------------------------------------------------------------------
 // UI Functions
 //----------------------------------------------------------------------------------
@@ -280,6 +324,22 @@ int lua_btnp(lua_State *L) {
     lua_pushboolean(L, is_pressed);
 
     return 1;
+}
+
+//----------------------------------------------------------------------------------
+// ui.pointer() -> x, y, just_pressed, absolute | nil
+//----------------------------------------------------------------------------------
+int lua_pointer(lua_State *L) {
+    if (!pointer_valid) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushinteger(L, pointer_x);
+    lua_pushinteger(L, pointer_y);
+    lua_pushboolean(L, pointer_pressed);
+    lua_pushboolean(L, 1);
+    return 4;
 }
 
 //----------------------------------------------------------------------------------
@@ -749,6 +809,9 @@ void lua_api_init(void) {
     lua_pushcfunction(globalLuaState, lua_btnp);
     lua_setfield(globalLuaState, -2, "btnp");
 
+    lua_pushcfunction(globalLuaState, lua_pointer);
+    lua_setfield(globalLuaState, -2, "pointer");
+
     lua_pushcfunction(globalLuaState, lua_log);
     lua_setfield(globalLuaState, -2, "log");
 
@@ -848,6 +911,8 @@ void lua_api_setup_game(const char *game_dir) {
 //----------------------------------------------------------------------------------
 void lua_api_call_update(void) {
     if (globalLuaState == NULL) return;
+
+    poll_pointer();
 
     lua_getglobal(globalLuaState, "update");
     if (lua_isfunction(globalLuaState, -1)) {
