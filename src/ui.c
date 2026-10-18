@@ -2,8 +2,13 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#if defined(PLATFORM_WEB)
+#include <emscripten/emscripten.h>
+#endif
+
 #include "ui.h"
 #include "font.h"
+#include "hardware_constraints.h"
 
 //----------------------------------------------------------------------------------
 // Global vars
@@ -233,19 +238,29 @@ void draw_triangle(TriangleItem *triangle) {
 //----------------------------------------------------------------------------------
 // Palette Functions
 //----------------------------------------------------------------------------------
-void palset(int position, int bgr555) {
-    if (position < 0 || position >= PALETTE_SIZE) return;
+void palset(int index, int rgb555) {
+    if (index < LUPI_HARDWARE_PALETTE_MIN_INDEX || index > LUPI_HARDWARE_PALETTE_MAX_INDEX) {
+        #if LUPI_SIMULATE_HARDWARE_CONSTRAINTS
+        fprintf(stderr, "Error in palset(): Invalid index %d (must be between %d and %d)\n", index, LUPI_HARDWARE_PALETTE_MIN_INDEX, LUPI_HARDWARE_PALETTE_MAX_INDEX);
+        #if defined(PLATFORM_WEB)
+        emscripten_force_exit(0);
+        #else
+        exit(EXIT_FAILURE);
+        #endif
+        #endif
+        return;
+    }
 
-    // Extract BGR555 components (5 bits each)
-    int r5 = (bgr555 >> 0) & 0x1F;
-    int g5 = (bgr555 >> 5) & 0x1F;
-    int b5 = (bgr555 >> 10) & 0x1F;
+    // Extract RGB555 components (5 bits each)
+    int r5 = (rgb555 >> 0) & 0x1F;
+    int g5 = (rgb555 >> 5) & 0x1F;
+    int b5 = (rgb555 >> 10) & 0x1F;
 
     // Scale from 5-bit (0-31) to 8-bit (0-255)
-    palette[position].r = (r5 << 3) | (r5 >> 2);
-    palette[position].g = (g5 << 3) | (g5 >> 2);
-    palette[position].b = (b5 << 3) | (b5 >> 2);
-    palette[position].a = 255;
+    palette[index].r = (r5 << 3) | (r5 >> 2);
+    palette[index].g = (g5 << 3) | (g5 >> 2);
+    palette[index].b = (b5 << 3) | (b5 >> 2);
+    palette[index].a = 255;
 }
 
 Color get_palette_color(int index) {

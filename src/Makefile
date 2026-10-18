@@ -36,7 +36,7 @@ STATIC_LIBS_FLAGS = -Wl,-Bstatic $(RAYLIB_LINUX_STATIC) $(LUA_55_LIB) -Wl,-Bdyna
 SRC_NATIVE = main.c ui.c lua_api.c zip.c
 
 # Compilation Flags
-CFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces
+CFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces -DLUPI_SIMULATE_HARDWARE_CONSTRAINTS=true
 
 # Emscripten Web Flags
 EMFLAGS = -s USE_GLFW=3
@@ -49,6 +49,7 @@ EMFLAGS += -DPLATFORM_WEB
 
 EMFLAGS += -s EXPORTED_FUNCTIONS='["_main", "_lupi_load_game", "_malloc", "_free"]'
 EMFLAGS += -s EXPORTED_RUNTIME_METHODS='["ccall", "FS"]'
+EMFLAGS += -s EXIT_RUNTIME=1
 
 # Optimization
 OPTIMIZATION = -O2

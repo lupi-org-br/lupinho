@@ -20,7 +20,7 @@ void draw_triangle(TriangleItem *triangle);
 //----------------------------------------------------------------------------------
 // Palette Functions
 //----------------------------------------------------------------------------------
-void palset(int position, int bgr555);
+void palset(int index, int rgb555);
 Color get_palette_color(int index);
 
 //----------------------------------------------------------------------------------
