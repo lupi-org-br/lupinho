@@ -35,6 +35,26 @@ STATIC_LIBS_FLAGS = -Wl,-Bstatic $(RAYLIB_LINUX_STATIC) $(LUA_55_LIB) -Wl,-Bdyna
 # Native (Linux) Source Files
 SRC_NATIVE = main.c ui.c lua_api.c zip.c
 
+# Lua 5.5 sources (used on macOS so we do not reuse the Linux liblua.a)
+# lua.c / luac.c are the standalone interpreter and compiler, not the library.
+LUA_55_DIR = libs/linux/lua-5.5.0/src
+LUA_55_SRC = $(filter-out $(LUA_55_DIR)/lua.c $(LUA_55_DIR)/luac.c,$(wildcard $(LUA_55_DIR)/*.c))
+
+# macOS Homebrew prefixes (libarchive is keg-only)
+MACOS_INCLUDE = $(LUA_55_INCLUDE) \
+	-I/opt/homebrew/include \
+	-I/opt/homebrew/opt/libarchive/include \
+	-I/usr/local/include \
+	-I/usr/local/opt/libarchive/include
+MACOS_LIBS = \
+	-L/opt/homebrew/lib \
+	-L/opt/homebrew/opt/libarchive/lib \
+	-L/usr/local/lib \
+	-L/usr/local/opt/libarchive/lib \
+	-lraylib -larchive -lm \
+	-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo \
+	-framework CoreAudio -framework AudioToolbox
+
 # Compilation Flags
 CFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces
 

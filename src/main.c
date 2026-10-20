@@ -27,6 +27,7 @@ void UpdateDrawFrame() {
     if (game_is_loading) return;
 #endif
     lua_api_call_update();
+    lua_api_audio_update();
 
     BeginDrawing();
 

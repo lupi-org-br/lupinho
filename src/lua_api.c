@@ -704,6 +704,153 @@ static int lua_sprites_loader(lua_State *L) {
 }
 
 //----------------------------------------------------------------------------------
+// sfx.* — WAV music/effects (docs: sfx.music, sfx.fx, sfx.volume)
+//----------------------------------------------------------------------------------
+static int audio_ready = 0;
+static Music current_music;
+static int music_loaded = 0;
+
+#define MAX_CACHED_SOUNDS 48
+typedef struct {
+    char name[256];
+    Sound sound;
+    int used;
+} CachedSound;
+static CachedSound cached_sounds[MAX_CACHED_SOUNDS];
+
+static void ensure_audio(void) {
+    if (audio_ready) return;
+    InitAudioDevice();
+    audio_ready = 1;
+}
+
+static int resolve_wav(const char *name, char *out, size_t out_sz) {
+    static const char *suffixes[] = { ".wav", "", NULL };
+    if (!name || !name[0]) return 0;
+    for (int i = 0; suffixes[i]; i++) {
+        snprintf(out, out_sz, "%s/%s%s", current_game_dir, name, suffixes[i]);
+        if (FileExists(out)) return 1;
+    }
+    return 0;
+}
+
+static Sound *load_cached_sound(const char *name) {
+    for (int i = 0; i < MAX_CACHED_SOUNDS; i++) {
+        if (cached_sounds[i].used && strcmp(cached_sounds[i].name, name) == 0) {
+            return &cached_sounds[i].sound;
+        }
+    }
+    char path[1024];
+    if (!resolve_wav(name, path, sizeof(path))) return NULL;
+    int slot = -1;
+    for (int i = 0; i < MAX_CACHED_SOUNDS; i++) {
+        if (!cached_sounds[i].used) { slot = i; break; }
+    }
+    if (slot < 0) return NULL;
+    Sound snd = LoadSound(path);
+    if (snd.frameCount == 0) {
+        UnloadSound(snd);
+        return NULL;
+    }
+    strncpy(cached_sounds[slot].name, name, sizeof(cached_sounds[slot].name) - 1);
+    cached_sounds[slot].sound = snd;
+    cached_sounds[slot].used = 1;
+    return &cached_sounds[slot].sound;
+}
+
+static int lua_sfx_music(lua_State *L) {
+    ensure_audio();
+    int stop = 0;
+    if (lua_isnumber(L, 1)) {
+        stop = lua_tonumber(L, 1) < 0;
+    } else if (!lua_isstring(L, 1) || lua_tostring(L, 1)[0] == 0) {
+        stop = 1;
+    }
+    if (music_loaded) {
+        StopMusicStream(current_music);
+        UnloadMusicStream(current_music);
+        music_loaded = 0;
+    }
+    if (stop) return 0;
+
+    const char *name = lua_tostring(L, 1);
+    char path[1024];
+    if (!resolve_wav(name, path, sizeof(path))) {
+        printf("sfx.music: file not found (%s)\n", name);
+        return 0;
+    }
+    current_music = LoadMusicStream(path);
+    if (current_music.frameCount == 0) {
+        printf("sfx.music: failed to load %s\n", path);
+        return 0;
+    }
+    current_music.looping = true;
+    PlayMusicStream(current_music);
+    music_loaded = 1;
+    return 0;
+}
+
+static int lua_sfx_fx(lua_State *L) {
+    ensure_audio();
+    if (lua_isstring(L, 1)) {
+        const char *name = lua_tostring(L, 1);
+        Sound *snd = load_cached_sound(name);
+        if (!snd) {
+            printf("sfx.fx: file not found (%s)\n", name);
+            return 0;
+        }
+        float pan = (float)luaL_optnumber(L, 3, 0.5);
+        SetSoundPan(*snd, pan);
+        PlaySound(*snd);
+        return 0;
+    }
+    return 0;
+}
+
+static int lua_sfx_volume(lua_State *L) {
+    ensure_audio();
+    float vol = (float)luaL_checknumber(L, 1);
+    if (vol < 0) vol = 0;
+    if (vol > 1) vol = 1;
+    SetMasterVolume(vol);
+    return 0;
+}
+
+static void bind_sfx(lua_State *L) {
+    lua_newtable(L);
+    lua_pushcfunction(L, lua_sfx_music);
+    lua_setfield(L, -2, "music");
+    lua_pushcfunction(L, lua_sfx_fx);
+    lua_setfield(L, -2, "fx");
+    lua_pushcfunction(L, lua_sfx_volume);
+    lua_setfield(L, -2, "volume");
+    lua_setglobal(L, "sfx");
+}
+
+void lua_api_audio_update(void) {
+    if (music_loaded) UpdateMusicStream(current_music);
+}
+
+static void audio_shutdown(void) {
+    if (music_loaded) {
+        StopMusicStream(current_music);
+        UnloadMusicStream(current_music);
+        music_loaded = 0;
+    }
+    for (int i = 0; i < MAX_CACHED_SOUNDS; i++) {
+        if (cached_sounds[i].used) {
+            UnloadSound(cached_sounds[i].sound);
+            cached_sounds[i].used = 0;
+            cached_sounds[i].name[0] = 0;
+        }
+    }
+    if (audio_ready) {
+        CloseAudioDevice();
+        audio_ready = 0;
+    }
+}
+
+//----------------------------------------------------------------------------------
 // lua_api_init — create Lua state, bind ui.* table, expose button constants
 //----------------------------------------------------------------------------------
 void lua_api_init(void) {
@@ -813,6 +960,8 @@ void lua_api_init(void) {
 
     lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_TRIGGER_1);
     lua_setglobal(globalLuaState, "BTN_G");
+
+    bind_sfx(globalLuaState);
 }
 
 //----------------------------------------------------------------------------------
@@ -866,6 +1015,7 @@ void lua_api_call_update(void) {
 // lua_api_close — shut down the Lua state
 //----------------------------------------------------------------------------------
 void lua_api_close(void) {
+    audio_shutdown();
     lua_close(globalLuaState);
     globalLuaState = NULL;
 }
