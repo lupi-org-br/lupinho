@@ -1,0 +1,7 @@
+.git
+dist
+site
+**/*.o
+**/*.a
+**/*.wasm
+**/*.exe
