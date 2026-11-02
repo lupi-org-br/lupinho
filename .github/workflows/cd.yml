@@ -1,0 +1,109 @@
+name: cd
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (example: v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: wasm
+            artifact: game.*
+          - name: linux
+            artifact: lupinho
+          - name: macos
+            artifact: lupinho*
+          - name: windows
+            artifact: lupinho.exe
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build with Docker
+        run: make -C src docker.${{ matrix.name }}
+
+      - name: Upload core
+        uses: actions/upload-artifact@v7
+        with:
+          name: lupinho-${{ matrix.name }}
+          path: dist/${{ matrix.artifact }}
+          if-no-files-found: error
+
+  release:
+    name: release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download builds
+        uses: actions/download-artifact@v7
+        with:
+          path: release
+          pattern: lupinho-*
+          merge-multiple: false
+
+      - name: Package assets
+        run: |
+          set -euo pipefail
+          find release -type f -print
+          mkdir -p assets
+
+          cp release/lupinho-linux/lupinho assets/lupinho-linux-x86_64
+          chmod +x assets/lupinho-linux-x86_64
+
+          cp release/lupinho-windows/lupinho.exe assets/lupinho-windows-x86_64.exe
+
+          if [ -f release/lupinho-macos/lupinho ]; then
+            cp release/lupinho-macos/lupinho assets/lupinho-macos
+            chmod +x assets/lupinho-macos
+          fi
+          for arch in x86_64 arm64; do
+            src="release/lupinho-macos/lupinho-${arch}"
+            if [ -f "$src" ]; then
+              cp "$src" "assets/lupinho-macos-${arch}"
+              chmod +x "assets/lupinho-macos-${arch}"
+            fi
+          done
+
+          (cd release/lupinho-wasm && zip -r ../../assets/lupinho-wasm.zip .)
+          (cd assets && sha256sum * > SHA256SUMS)
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            echo "Missing release tag."
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" assets/* --repo "$REPO" --clobber
+          else
+            gh release create "$TAG" assets/* \
+              --repo "$REPO" \
+              --target "$SHA" \
+              --title "$TAG" \
+              --generate-notes
+          fi
