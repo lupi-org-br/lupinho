@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "lua_api.h"
+#include "music.h"
 #include "ui.h"
 #include "raylib.h"
 
@@ -813,6 +814,8 @@ void lua_api_init(void) {
 
     lua_pushinteger(globalLuaState, GAMEPAD_BUTTON_RIGHT_TRIGGER_1);
     lua_setglobal(globalLuaState, "BTN_G");
+
+    music_bind(globalLuaState);
 }
 
 //----------------------------------------------------------------------------------
@@ -820,6 +823,7 @@ void lua_api_init(void) {
 //----------------------------------------------------------------------------------
 void lua_api_setup_game(const char *game_dir) {
     snprintf(current_game_dir, sizeof(current_game_dir), "%s", game_dir);
+    music_set_root(game_dir);
 
     lua_getglobal(globalLuaState, "package");
 
@@ -866,6 +870,7 @@ void lua_api_call_update(void) {
 // lua_api_close — shut down the Lua state
 //----------------------------------------------------------------------------------
 void lua_api_close(void) {
+    music_shutdown();
     lua_close(globalLuaState);
     globalLuaState = NULL;
 }

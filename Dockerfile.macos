@@ -8,17 +8,38 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     clang \
+    cmake \
+    git \
     lld \
     llvm \
     libc6-dev \
     make \
+    ninja-build \
     patch \
+    pkg-config \
+    python3 \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=osxcross /osxcross /osxcross
 ENV PATH="/osxcross/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/osxcross/lib"
+# CMake looks up these names with no Darwin target prefix.
+RUN set -eu; \
+    bin=/osxcross/bin; \
+    for tool in install_name_tool otool dsymutil; do \
+      if [ ! -e "$bin/$tool" ]; then \
+        src=$(ls "$bin"/x86_64-apple-darwin*-"$tool" | head -1); \
+        ln -s "$src" "$bin/$tool"; \
+      fi; \
+    done; \
+    ln -sfn "$(ls "$bin"/x86_64-apple-darwin*-ar | head -1)" "$bin/apple-ar"; \
+    ln -sfn "$(ls "$bin"/x86_64-apple-darwin*-ranlib | head -1)" "$bin/apple-ranlib"; \
+    sdk=$(ls -d /osxcross/SDK/MacOSX*.sdk | head -1); \
+    ln -sfn "$sdk" /osxcross/SDK/MacOSX.sdk
+
+COPY src/music/fetch_furnace.sh /tmp/fetch_furnace.sh
+RUN sh /tmp/fetch_furnace.sh /furnace
 
 WORKDIR /lupinho
 COPY . /lupinho/

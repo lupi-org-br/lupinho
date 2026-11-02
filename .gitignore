@@ -11,3 +11,5 @@ src/libs/macos/
 src/libs/web/raylib-build/
 src/libs/linux/raylib/*.a
 src/libs/linux/raylib/*.o
+src/music/furnace-build-*/
+src/music/fur_player-*.o

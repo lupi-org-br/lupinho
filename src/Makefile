@@ -23,7 +23,7 @@ CC_OSX_ARM ?= oa64-clang
 endif
 
 # Source Files
-SRC = main.c ui.c lua_api.c
+SRC = main.c ui.c lua_api.c music.c
 
 # Output File
 OUTPUT = ../dist/game.html
@@ -61,7 +61,60 @@ NATIVE_INCLUDE = $(LUA_55_INCLUDE) $(RAYLIB_INCLUDE)
 NATIVE_LIBS = $(RAYLIB_LINUX_OBJS) -lGL -lm -lpthread -ldl -lrt -lX11 -lXcursor -lXinerama -lXrandr -lXi -lz
 
 # Native (Linux / macOS / Windows) Source Files
-SRC_NATIVE = main.c ui.c lua_api.c zip.c
+SRC_NATIVE = main.c ui.c lua_api.c zip.c music.c
+
+# Furnace (.fur) playback. Sources live outside this repo; set FURNACE_SRC to override.
+FURNACE_SRC ?= $(abspath ../../furnace)
+FURNACE_TAG ?= host
+FURNACE_BUILD = music/furnace-build-$(FURNACE_TAG)
+FURNACE_LIB = $(FURNACE_BUILD)/libfurengine.a
+FUR_CXX ?= c++
+FUR_CXXFLAGS = -std=c++14 -DHAVE_SNDFILE \
+	-include cstring -include climits \
+	-I$(FURNACE_SRC)/src -I$(FURNACE_SRC)/src/engine \
+	-I$(FURNACE_SRC)/extern/fmt/include \
+	-I$(FURNACE_SRC)/extern/blip_buf \
+	-I$(FURNACE_SRC)/extern/libsndfile-modified/include
+FUR_PLAYER_OBJ = music/fur_player-$(FURNACE_TAG).o
+ifeq ($(shell uname -s),Darwin)
+FUR_STDLIB = -lc++
+FUR_WHOLE = -Wl,-force_load,$(FURNACE_LIB)
+else
+FUR_STDLIB = -lstdc++
+FUR_WHOLE = -Wl,--whole-archive $(FURNACE_LIB) -Wl,--no-whole-archive
+endif
+FUR_EXTRA_LIBS = $(FUR_WHOLE) $(FUR_STDLIB) `cat $(FURNACE_BUILD)/furengine-libs.txt 2>/dev/null`
+
+ifeq ($(shell uname -s)-$(shell uname -m),Darwin-arm64)
+FURNACE_TAG_ARM = host
+else
+FURNACE_TAG_ARM = arm64
+endif
+
+ifeq ($(shell uname -s),Darwin)
+FURNACE_OSX_CMAKE_X86 = -DCMAKE_OSX_ARCHITECTURES=x86_64
+FURNACE_OSX_CMAKE_ARM =
+else
+FURNACE_OSX_CMAKE_X86 = -DCMAKE_SYSTEM_NAME=Darwin -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+	-DCMAKE_C_COMPILER=$(CC_OSX_X86) -DCMAKE_CXX_COMPILER=$(subst clang,clang++,$(CC_OSX_X86)) \
+	-DCMAKE_OSX_SYSROOT=/osxcross/SDK/MacOSX.sdk \
+	-DCMAKE_AR=/osxcross/bin/apple-ar -DCMAKE_RANLIB=/osxcross/bin/apple-ranlib \
+	-DWITH_RENDER_METAL=OFF -DWITH_RENDER_OPENGL=OFF -DWITH_RENDER_SDL=OFF \
+	-DSYSTEM_ZLIB=OFF
+FURNACE_OSX_CMAKE_ARM = -DCMAKE_SYSTEM_NAME=Darwin -DCMAKE_SYSTEM_PROCESSOR=arm64 \
+	-DCMAKE_C_COMPILER=$(CC_OSX_ARM) -DCMAKE_CXX_COMPILER=$(subst clang,clang++,$(CC_OSX_ARM)) \
+	-DCMAKE_OSX_SYSROOT=/osxcross/SDK/MacOSX.sdk \
+	-DCMAKE_AR=/osxcross/bin/apple-ar -DCMAKE_RANLIB=/osxcross/bin/apple-ranlib \
+	-DWITH_RENDER_METAL=OFF -DWITH_RENDER_OPENGL=OFF -DWITH_RENDER_SDL=OFF \
+	-DSYSTEM_ZLIB=OFF
+endif
+
+# Tag is the path stem. Target-specific FURNACE_TAG is applied too late to name the file.
+music/furnace-build-%/libfurengine.a:
+	sh music/build_furnace.sh $* "$(FURNACE_SRC)" $(FURNACE_CMAKE_EXTRA)
+
+music/fur_player-%.o: music/fur_player.cpp music/fur_player.h
+	$(FUR_CXX) -c music/fur_player.cpp -o $@ $(FUR_CXXFLAGS) $(OPTIMIZATION)
 
 # macOS (osxcross `o64-clang` or native clang)
 MACOS_INCLUDE = $(LUA_55_INCLUDE) $(RAYLIB_INCLUDE)
@@ -99,24 +152,52 @@ DEBUG_FLAGS = -DDEBUG_MODE
 PROD_FLAGS = -O3 -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s ELIMINATE_DUPLICATE_FUNCTIONS=1 -DPRODUCTION
 
 # Web (Lua 5.5.0 + vendored raylib, compiled with emcc)
+web production web-game: FURNACE_TAG=web
+web production web-game: FUR_CXX=em++
+web production web-game: FUR_WHOLE=-Wl,--whole-archive $(FURNACE_LIB) -Wl,--no-whole-archive
+web production web-game: FUR_STDLIB=
+
+# C sources stay on emcc. em++ rejects -std=c99, and the web target used to
+# override CC for every prerequisite, including these Raylib objects.
+WEB_C_SRC = $(SRC) $(LUA_55_SRC)
+WEB_C_OBJS_web = $(patsubst %.c,libs/web/c-build/web/%.o,$(WEB_C_SRC))
+WEB_C_OBJS_production = $(patsubst %.c,libs/web/c-build/production/%.o,$(WEB_C_SRC))
+WEB_C_OBJS_webgame = $(patsubst %.c,libs/web/c-build/webgame/%.o,$(WEB_C_SRC))
+WEB_C_COMPILE = emcc -c $< -o $@ $(LUA_55_INCLUDE) $(RAYLIB_INCLUDE) $(CFLAGS) -DPLATFORM_WEB
+
+libs/web/c-build/web/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WEB_C_COMPILE) -DDEBUG_MODE $(OPTIMIZATION)
+
+libs/web/c-build/production/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WEB_C_COMPILE) -DPRODUCTION -O3
+
+libs/web/c-build/webgame/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WEB_C_COMPILE) -DAUTO_LOAD_GAME $(OPTIMIZATION)
+
+# Web (Lua 5.5.0 + vendored raylib, compiled with emcc)
 $(RAYLIB_WEB_OBJDIR)/%.o: $(RAYLIB_SRC)/%.c
 	@mkdir -p $(RAYLIB_WEB_OBJDIR)
 	$(CC) -c $< -o $@ $(RAYLIB_WEB_CFLAGS)
 
-# Web Target (development with debug)
-web: $(SRC) $(LUA_55_SRC) $(RAYLIB_WEB_OBJS)
+# Web Target (development with debug). em++ links the C++ Furnace player.
+web: $(WEB_C_OBJS_web) $(RAYLIB_WEB_OBJS) music/furnace-build-web/libfurengine.a music/fur_player-web.o
 	@mkdir -p ../dist
-	$(CC) $(SRC) $(LUA_55_SRC) $(RAYLIB_WEB_OBJS) -o $(OUTPUT) \
-		$(LUA_55_INCLUDE) $(RAYLIB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(OPTIMIZATION) $(DEBUG_FLAGS)
+	em++ $(WEB_C_OBJS_web) $(RAYLIB_WEB_OBJS) $(FUR_PLAYER_OBJ) -o $(OUTPUT) \
+		$(EMFLAGS) $(OPTIMIZATION) $(DEBUG_FLAGS) \
+		$(FUR_EXTRA_LIBS) -fexceptions -s DISABLE_EXCEPTION_CATCHING=0
 
 # Production Target (optimized, no debug)
-production: $(SRC) $(LUA_55_SRC) $(RAYLIB_WEB_OBJS)
+production: $(WEB_C_OBJS_production) $(RAYLIB_WEB_OBJS) music/furnace-build-web/libfurengine.a music/fur_player-web.o
 	@mkdir -p ../dist
-	$(CC) $(SRC) $(LUA_55_SRC) $(RAYLIB_WEB_OBJS) -o $(OUTPUT) \
-		$(LUA_55_INCLUDE) $(RAYLIB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(PROD_FLAGS)
+	em++ $(WEB_C_OBJS_production) $(RAYLIB_WEB_OBJS) $(FUR_PLAYER_OBJ) -o $(OUTPUT) \
+		$(EMFLAGS) $(PROD_FLAGS) \
+		$(FUR_EXTRA_LIBS) -fexceptions -s DISABLE_EXCEPTION_CATCHING=0
 
 # Web Game Target (embed .lupi file)
-web-game: $(SRC) $(LUA_55_SRC) $(RAYLIB_WEB_OBJS)
+web-game: $(WEB_C_OBJS_webgame) $(RAYLIB_WEB_OBJS) music/furnace-build-web/libfurengine.a music/fur_player-web.o
 	@if [ -z "$(GAME_PATH)" ]; then echo "Error: GAME_PATH is required. Usage: make web-game GAME_PATH=game.lupi"; exit 1; fi
 	@echo "Extracting $(GAME_PATH)..."
 	@rm -rf /tmp/lupi-web-game
@@ -124,8 +205,9 @@ web-game: $(SRC) $(LUA_55_SRC) $(RAYLIB_WEB_OBJS)
 	@unzip -q "$(GAME_PATH)" -d /tmp/lupi-web-game -x "*.git*" "*.lupi"
 	@echo "Building with embedded game..."
 	@mkdir -p ../dist/webgame
-	$(CC) $(SRC) $(LUA_55_SRC) $(RAYLIB_WEB_OBJS) -o ../dist/webgame/game.html \
-		$(LUA_55_INCLUDE) $(RAYLIB_INCLUDE) $(CFLAGS) $(EMFLAGS) $(OPTIMIZATION) -DAUTO_LOAD_GAME \
+	em++ $(WEB_C_OBJS_webgame) $(RAYLIB_WEB_OBJS) $(FUR_PLAYER_OBJ) -o ../dist/webgame/game.html \
+		$(EMFLAGS) $(OPTIMIZATION) -DAUTO_LOAD_GAME \
+		$(FUR_EXTRA_LIBS) -fexceptions -s DISABLE_EXCEPTION_CATCHING=0 \
 		--preload-file /tmp/lupi-web-game@/loaded_game
 	@echo "Build complete! Output in ../dist/webgame/"
 
@@ -139,11 +221,15 @@ $(RAYLIB_LINUX_DIR)/rglfw.o: $(RAYLIB_SRC)/rglfw.c
 	$(CC_NATIVE) -c $< -o $@ $(RAYLIB_CFLAGS) -D_GLFW_X11 -fPIC -U_GNU_SOURCE
 
 # Linux Target (native desktop)
-linux: $(SRC_NATIVE) $(LUA_55_SRC) $(RAYLIB_LINUX_OBJS)
+linux: FURNACE_TAG=linux
+linux: FUR_CXX=g++
+linux: FUR_WHOLE=-Wl,--whole-archive $(FURNACE_LIB) -Wl,--no-whole-archive
+linux: FUR_STDLIB=-lstdc++
+linux: $(SRC_NATIVE) $(LUA_55_SRC) $(RAYLIB_LINUX_OBJS) music/furnace-build-linux/libfurengine.a music/fur_player-linux.o
 	@mkdir -p ../dist
-	$(CC_NATIVE) $(SRC_NATIVE) $(LUA_55_SRC) -o ../dist/lupinho \
+	$(CC_NATIVE) $(SRC_NATIVE) $(LUA_55_SRC) $(FUR_PLAYER_OBJ) -o ../dist/lupinho \
 		$(NATIVE_INCLUDE) $(CFLAGS) -DLUA_USE_POSIX -DLUA_USE_DLOPEN \
-		$(NATIVE_LIBS) $(OPTIMIZATION)
+		$(NATIVE_LIBS) $(FUR_EXTRA_LIBS) $(OPTIMIZATION)
 
 # macOS (osxcross o64/oa64-clang, or native clang -arch)
 $(RAYLIB_MACOS_ARCH_DIR)/%.o: $(RAYLIB_SRC)/%.c
@@ -154,17 +240,23 @@ $(RAYLIB_MACOS_ARCH_DIR)/rglfw.o: $(RAYLIB_SRC)/rglfw.c
 	@mkdir -p $(RAYLIB_MACOS_ARCH_DIR)
 	$(CC_OSX) -x objective-c -c $< -o $@ $(RAYLIB_CFLAGS) -U_GNU_SOURCE
 
-macos-arch: $(SRC_NATIVE) $(LUA_55_SRC) $(RAYLIB_MACOS_OBJS)
+macos-arch: FUR_WHOLE=-Wl,-force_load,$(FURNACE_LIB)
+macos-arch: FUR_STDLIB=-lc++
+macos-arch: $(SRC_NATIVE) $(LUA_55_SRC) $(RAYLIB_MACOS_OBJS) $(FURNACE_LIB) $(FUR_PLAYER_OBJ)
 	@mkdir -p ../dist
-	$(CC_OSX) $(SRC_NATIVE) $(LUA_55_SRC) -o ../dist/lupinho-$(RAYLIB_MACOS_ARCH) \
+	$(CC_OSX) $(SRC_NATIVE) $(LUA_55_SRC) $(FUR_PLAYER_OBJ) -o ../dist/lupinho-$(RAYLIB_MACOS_ARCH) \
 		$(MACOS_INCLUDE) $(CFLAGS) -DLUA_USE_MACOSX \
-		$(MACOS_LIBS) $(OPTIMIZATION)
+		$(MACOS_LIBS) $(FUR_EXTRA_LIBS) $(OPTIMIZATION)
 
 macos-x86_64:
-	$(MAKE) macos-arch RAYLIB_MACOS_ARCH=x86_64 CC_OSX="$(CC_OSX_X86)"
+	$(MAKE) macos-arch RAYLIB_MACOS_ARCH=x86_64 CC_OSX="$(CC_OSX_X86)" \
+		FURNACE_TAG=x86_64 FUR_CXX="$(subst clang,clang++,$(CC_OSX_X86))" \
+		FURNACE_CMAKE_EXTRA="$(FURNACE_OSX_CMAKE_X86)"
 
 macos-arm64:
-	$(MAKE) macos-arch RAYLIB_MACOS_ARCH=arm64 CC_OSX="$(CC_OSX_ARM)"
+	$(MAKE) macos-arch RAYLIB_MACOS_ARCH=arm64 CC_OSX="$(CC_OSX_ARM)" \
+		FURNACE_TAG=$(FURNACE_TAG_ARM) FUR_CXX="$(subst clang,clang++,$(CC_OSX_ARM))" \
+		FURNACE_CMAKE_EXTRA="$(FURNACE_OSX_CMAKE_ARM)"
 
 macos-universal:
 	@mkdir -p ../dist
@@ -193,11 +285,21 @@ $(RAYLIB_WIN_DIR)/rglfw.o: $(RAYLIB_SRC)/rglfw.c
 	$(CC_MINGW) -c $< -o $@ $(RAYLIB_CFLAGS) -DUNICODE -D_WIN32_WINNT=0x0601 -U_GNU_SOURCE
 
 # Windows Target (MinGW desktop, cross-compile from Linux/macOS or native MinGW)
-windows: $(SRC_NATIVE) $(LUA_55_SRC) $(RAYLIB_WIN_OBJS)
+ifeq ($(OS),Windows_NT)
+CXX_MINGW ?= g++
+else
+CXX_MINGW ?= x86_64-w64-mingw32-g++
+endif
+windows: FURNACE_TAG=windows
+windows: FUR_CXX=$(CXX_MINGW)
+windows: FUR_WHOLE=-Wl,--whole-archive $(FURNACE_LIB) -Wl,--no-whole-archive
+windows: FUR_STDLIB=-static-libstdc++ -lstdc++
+windows: FURNACE_CMAKE_EXTRA=-DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=$(CC_MINGW) -DCMAKE_CXX_COMPILER=$(CXX_MINGW) -DSYSTEM_ZLIB=OFF
+windows: $(SRC_NATIVE) $(LUA_55_SRC) $(RAYLIB_WIN_OBJS) music/furnace-build-windows/libfurengine.a music/fur_player-windows.o
 	@mkdir -p ../dist
-	$(CC_MINGW) $(SRC_NATIVE) $(LUA_55_SRC) -o ../dist/lupinho.exe \
+	$(CC_MINGW) $(SRC_NATIVE) $(LUA_55_SRC) $(FUR_PLAYER_OBJ) -o ../dist/lupinho.exe \
 		$(WIN_INCLUDE) $(WIN_CFLAGS) $(OPTIMIZATION) \
-		$(WIN_LIBS)
+		$(WIN_LIBS) $(FUR_EXTRA_LIBS)
 
 # Docker SDK: `make docker.linux`, `make docker.macos`, `make docker.windows`
 # Explicit names: BSD make (macOS /usr/bin/make) has no `%` pattern rules.
@@ -215,7 +317,7 @@ docker.linux docker.macos docker.windows docker.wasm:
 
 # Clean generated files
 clean:
-	rm -rf ../dist/webgame/ $(RAYLIB_MACOS_DIR) $(RAYLIB_WEB_OBJDIR)
+	rm -rf ../dist/webgame/ $(RAYLIB_MACOS_DIR) $(RAYLIB_WEB_OBJDIR) libs/web/c-build
 	rm -f $(OUTPUT) ../dist/game.js ../dist/game.wasm ../dist/game.data \
 		lupi_emulator ../dist/lupinho ../dist/lupinho-static ../dist/lupinho.exe \
 		../dist/lupinho-x86_64 ../dist/lupinho-arm64

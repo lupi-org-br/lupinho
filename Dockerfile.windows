@@ -4,12 +4,22 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    make \
+    cmake \
+    g++ \
+    g++-mingw-w64-x86-64 \
     gcc-mingw-w64-x86-64 \
+    git \
     libz-mingw-w64-dev \
+    make \
+    ninja-build \
     patch \
+    pkg-config \
+    python3 \
     zip \
     && rm -rf /var/lib/apt/lists/*
+
+COPY src/music/fetch_furnace.sh /tmp/fetch_furnace.sh
+RUN sh /tmp/fetch_furnace.sh /furnace
 
 WORKDIR /lupinho
 COPY . /lupinho/

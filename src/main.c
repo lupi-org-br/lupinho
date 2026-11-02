@@ -5,6 +5,7 @@
 #include "raylib.h"
 #include "ui.h"
 #include "lua_api.h"
+#include "music.h"
 
 #if !defined(PLATFORM_WEB)
 #include "zip.h"
@@ -26,6 +27,7 @@ void UpdateDrawFrame() {
 #if defined(PLATFORM_WEB)
     if (game_is_loading) return;
 #endif
+    music_update(GetFrameTime());
     lua_api_call_update();
 
     BeginDrawing();
